@@ -178,7 +178,7 @@ flowchart TD
 
 | # | 呼叫 | 說明 |
 |---|---|---|
-| **[1]** | Feign → `GET /api/contact/getContactMessageByStatus` | 宣告式 client，`ContactProxy` 介面無實作，由 Spring 執行期動態代理 |
+| **[1]** | Feign → `GET /api/contact/getContactMessageByStatus` | 宣告式 client，`OpenFeignRestClient` 介面無實作，由 Feign 在執行期動態代理 |
 | **[2]** | RestTemplate → `POST /api/contact/saveContactMessage` | 回傳整個 `ResponseEntity`，**上游 201 原樣傳遞** |
 | **[3]** | WebClient → `POST /api/contact/saveContactMessage` | 只回 `Mono<Response>`（body），外層狀態碼走 Spring 預設 **200** |
 | **[4]** | MyWeb **主動**向 8083 註冊 | 啟動時送出 service / management base-url |
@@ -225,8 +225,9 @@ springboot-webapp/
 │   └── src/main/java/com/company/ConsumingRestService/
 │       ├── config/ProjectConfiguration.java   # 三個 client bean，各自預設 Basic Auth
 │       ├── controller/ContactRestController.java
-│       ├── model/                      # Contact / Response（獨立複製的 POJO，非共用 jar）
-│       └── proxy/ContactProxy.java     # @FeignClient 宣告式介面
+│       ├── dto/                        # Contact / Response（獨立複製的 POJO，非共用 jar）
+│       └── proxy/
+│           └── OpenFeignRestClient.java  # @FeignClient 宣告式介面
 │
 └── AdminActuator/                      # Boot Admin Server（8083）
     └── src/main/java/com/company/AdminActuator/
@@ -556,7 +557,7 @@ java -jar target\MyWeb-0.0.1-SNAPSHOT.jar     # 執行打包好的 jar
 | 啟動時 `Schema-validation: missing table/column` | `ddl-auto=validate` 抓到 `sql/schema.sql` 與 Entity 不一致 — 同步兩邊 |
 | 呼叫 `/api/**` 回 **401** | 沒帶 Basic Auth 或權限不足（需 `ROLE_ADMIN`） |
 | `/public/register` 以外的註冊網址回 **404** | 註冊頁在 `/public/register`，表單 POST 到 `/public/createUser` |
-| Feign `ConnectException: Connection refused` | `ContactProxy` 目標寫死 `http://localhost:8081` — 先啟動 `MyWeb` |
+| Feign `ConnectException: Connection refused` | `OpenFeignRestClient` 目標寫死 `http://localhost:8081` — 先啟動 `MyWeb` |
 | console 一直刷 `authenticate` 與 SQL | Admin Server 正在輪詢；已透過收斂 `LoggerAspect` 切點與移除 `show-sql` 解決 — 若復發，檢查這兩處 |
 | Boot Admin UI 看不到 `MyWeb` | 確認 `spring.boot.admin.client.enabled=true` 且 `AdminActuator` 已在 8083 啟動 |
 | `@Slf4j` / `@Data` 未生效 | `maven-compiler-plugin` 缺少 Lombok annotation processor 宣告 |
