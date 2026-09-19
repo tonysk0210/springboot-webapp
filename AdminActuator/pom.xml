@@ -36,7 +36,8 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webmvc</artifactId>
         </dependency>
-        <!-- Codecentric actuator admin server-->
+
+        <!-- 提供 Spring Boot Admin Server，建立管理介面以監控 Spring Boot 應用程式 -->
         <dependency>
             <groupId>de.codecentric</groupId>
             <artifactId>spring-boot-admin-starter-server</artifactId>

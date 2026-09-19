@@ -5,6 +5,10 @@
 # Log file
 *.log
 
+# logging.file.name=logs/myweb.log 的輸出目錄（含輪替後的 .gz 檔）
+# 目錄位置取決於啟動時的工作目錄：從 repo 根啟動 → ./logs、從 MyWeb/ 啟動 → MyWeb/logs
+logs/
+
 # Package Files
 *.jar
 *.war
@@ -22,7 +26,7 @@ replay_pid*
 ._*
 
 # Custom folder icons
-Icon
+Icon
 
 # Volume root files
 .DocumentRevisions-V100

@@ -18,6 +18,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static com.company.myweb.constant.ProjectConstant.ANSI_GREEN;
+import static com.company.myweb.constant.ProjectConstant.ANSI_RESET;
 
 /**
  * 使用者提交 POST /login 後的完整流程：
@@ -66,7 +67,11 @@ public class UsernamePwdAuthenticationProvider implements AuthenticationProvider
         String enteredPassword = authentication.getCredentials().toString();
         // 2) 依 email 查 Person（Person.roles 是 EAGER，一併載入）
         Person person = personRepository.readByEmail(enteredEmail);
-        log.info(ANSI_GREEN + "Current method: " + Thread.currentThread().getStackTrace()[1].getMethodName() + " | Person: " + person);
+
+        log.info(ANSI_GREEN + "authenticate | email={}, found={}, role={}" + ANSI_RESET,
+                enteredEmail,
+                person != null,
+                person != null && person.getRoles() != null ? person.getRoles().getRoleName() : "N/A");
 
         // 3) 認證邏輯：使用者存在 + BCrypt 比對輸入密碼與 DB 內加密密碼相符
         if (person != null && passwordEncoder.matches(enteredPassword, person.getPassword()))

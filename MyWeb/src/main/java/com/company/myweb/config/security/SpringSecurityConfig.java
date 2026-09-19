@@ -64,7 +64,7 @@ public class SpringSecurityConfig {
         // 登出流程改在 LoginController 內手動處理（走 GET 繞過預設 CSRF）
         // http.logout(...) 因此不在此設定
 
-        // 同時啟用 HTTP Basic Auth：給 Boot Admin server poll actuator、REST API 呼叫使用
+        // 允許 AdminActuator 與其他 REST Client 以 Basic Auth 呼叫需要 ROLE_ADMIN 的 Actuator 與 REST API。
         http.httpBasic(Customizer.withDefaults());
 
         // 關掉 X-Frame-Options → 允許 H2 console 用 <iframe> 顯示子視窗

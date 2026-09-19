@@ -46,7 +46,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### 進入點與關鍵註解
 根 package 為 **`com.company.myweb`**（全小寫）。`MyWebApplication.java` 只帶三個 class-level 註解，因為 Entity / Repository 都位於 `com.company.myweb.*` 預設 scan 範圍內：
-- `@SpringBootApplication` — 由 Boot 的 AOP autoconfigure 自動啟用 `aspect/LoggerAspect`（以 `@Around` 為 `com.company.myweb..*` 底下 **所有** 方法加上執行時間 log、以 `@AfterThrowing` 記錄例外），**不需要** 再寫 `@EnableAspectJAutoProxy`。同理 Entity/Repository 都在預設 scan 範圍，**不需要** 顯式 `@EntityScan` / `@EnableJpaRepositories`；新增時放在 `model/` 與 `repository/` 底下即可
+- `@SpringBootApplication` — 由 Boot 的 AOP autoconfigure 自動啟用 `aspect/LoggerAspect`，**不需要** 再寫 `@EnableAspectJAutoProxy`。該 aspect 的兩個 advice **切點範圍刻意不同**：`@Around`（執行時間 log）只涵蓋 `controller..*`、`rest..*`、`service..*` 三層（具名 pointcut `businessLayer()`）；`@AfterThrowing`（例外 log）維持 `com.company.myweb..*` 全範圍。理由：actuator 走 Basic Auth 且無 session，AdminActuator 每次輪詢都會重新驗證一次，若 `@Around` 全攔就會把 `config.security` 與 `repository` 的呼叫一併刷出來（單次輪詢約 7 行、且 `Person` 為 EAGER + `@Data` toString 會印出 BCrypt hash）。例外是低頻事件，全範圍不會產生噪音。兩個切點都再 `&& notRestExceptionHandler()` 排除 `rest/GlobalExceptionRestController`（它繼承的 `ResponseEntityExceptionHandler.handleException(..)` 是 `public final`，CGLIB 無法 override → 只要任一 advice 匹配到就會噴 WARN，**兩邊都要排除才會消失**）。同理 Entity/Repository 都在預設 scan 範圍，**不需要** 顯式 `@EntityScan` / `@EnableJpaRepositories`；新增時放在 `model/` 與 `repository/` 底下即可
 - `@EnableJpaAuditing(auditorAwareRef = "auditAwareImpl")` — `auditor/AuditAwareImpl` 從 `SecurityContextHolder` 取得目前使用者名稱作為 `@CreatedBy` / `@LastModifiedBy` 欄位值；若無驗證則退回為 `"anonymousUser"`（**未登入註冊** 時仍能寫入 `person.created_by` 的關鍵）
 - `@EnableConfigurationProperties(MyWebProperties.class)` — 顯式登記 `myweb.*` 屬性 bean，取代在 `MyWebProperties` 上加 `@Component`
 
@@ -82,7 +82,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - 例外處理：MVC 由 `config/GlobalExceptionHandler` 處理；REST 由 `rest/GlobalExceptionRestController` 處理
 
 ### MyWeb 對外提供的端點
-- 網頁 UI：`/`、`/home`、`/about`、`/contact`、`/news`、`/login`、`/register`
+- 網頁 UI：`/`、`/home`、`/about`、`/contact`、`/news`、`/login`；註冊在 **`/public/register`**（表單 POST 到 `/public/createUser`）— `PublicController` 有 class 層 `@RequestMapping("/public")`
 - 自訂 REST：`/api/contact/*`（見 `ContactRestController`）
 - Spring Data REST 自動端點：`/spring-data-api/**`（HAL Explorer 位於 `/spring-data-api/`）
 - Actuator：`/myWeb/actuator/**`（所有端點皆開啟 — `management.endpoints.web.exposure.include=*`）
@@ -102,6 +102,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Log 顏色
 `constant/ProjectConstant` 定義了 ANSI 顏色碼，供 `LoggerAspect` 與部分 controller 使用。`application.properties` 內的 console log pattern 使用了 Logback 顏色轉換器 — 終端機會有彩色輸出。
+
+log 同時落地為檔案（`logging.file.name=logs/myweb.log`，已加入 `MyWeb/.gitignore`）。這個屬性是 `/myWeb/actuator/logfile` 端點的**註冊前提** — 沒設就沒有該端點，Spring Boot Admin 的 Logfile 頁籤也會是空的。`logging.pattern.file` 刻意**不帶** ANSI 顏色轉換器，否則顏色碼會寫進檔案變成亂碼；輪替由 `logging.logback.rollingpolicy.*` 控制（單檔 10MB／保留 7 天／總量 100MB）。
+
+**不要加回 `spring.jpa.show-sql=true`** — 它直接 `System.out.println`，不經 Logback，所以無法用 log level 控制、不進 log 檔、Admin 的 Logfile 頁籤看不到，而且會被 actuator 輪詢洗版（每次驗證 3 筆查詢）。要看 SQL 請改用 `logging.level.org.hibernate.SQL=DEBUG`（參數值再加 `org.hibernate.orm.jdbc.bind=TRACE`），可在 Boot Admin 的 Loggers 頁籤線上開關、免重啟。
 
 ### Lombok 慣例
 專案 pom 內含 **Lombok**（`optional=true`），全 codebase 已廣泛使用，請 **遵循既有寫法**，勿手寫 constructor / getter / setter / logger：
