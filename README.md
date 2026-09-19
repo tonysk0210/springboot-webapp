@@ -313,9 +313,17 @@ private Set<Course> courses = new HashSet<>();             // 型別 Course → 
 
 ## 3. 核心功能與亮點
 
-### 🔐 自訂認證流程，不是預設的 `UserDetailsService`
+### 🔐 Spring Security 的完整應用面
 
-`UsernamePwdAuthenticationProvider` 直接實作 `AuthenticationProvider`，以 **email** 查 `person` 表、用 `BCryptPasswordEncoder` 比對，並手動組出 `ROLE_` 前綴的 `GrantedAuthority`。適合用來理解 Spring Security 的驗證鏈到底怎麼跑。
+安全性設定集中在 `config/security/`，涵蓋**認證、授權、密碼、CSRF、前端整合**五個面向。
+
+#### ① 認證 — 自訂 `AuthenticationProvider`，不走預設的 `UserDetailsService`
+
+`UsernamePwdAuthenticationProvider` 直接實作 `AuthenticationProvider`，以 **email** 查 `person` 表、用 `BCryptPasswordEncoder` 比對，並手動組出 `ROLE_` 前綴的 `GrantedAuthority`。
+
+官方建議做法是只寫 `UserDetailsService`（負責查使用者，密碼比對交給 Spring 內建的 `DaoAuthenticationProvider`）。這裡刻意往下一層寫，**把整條驗證鏈攤開來**，方便理解流程。
+
+#### ② 授權 — 路徑規則
 
 | 路徑 | 需要權限 |
 |---|---|
@@ -323,6 +331,47 @@ private Set<Course> courses = new HashSet<>();             // 型別 Course → 
 | `/admin/**`、`/api/**`、`/spring-data-api/**`、`/myWeb/actuator/**` | `ROLE_ADMIN` |
 | `/dashboard`、`/profilePage`、`/updateProfile` | 任何已登入使用者 |
 | 其他（`/`、`/login`、`/public/**`、H2 console…） | `permitAll` |
+
+`hasRole("ADMIN")` 比對的實際字串是 `ROLE_ADMIN` —— 前綴由 provider 的 `getGrantedAuthorities()` 加上。
+
+#### ③ 兩種登入方式並存
+
+| 方式 | 用途 | 設定 |
+|---|---|---|
+| **表單登入** | 瀏覽器使用者 | `http.formLogin(...)` — 登入頁 `/login`、成功導 `/dashboard`、失敗導 `/login?error=true` |
+| **HTTP Basic** | AdminActuator 輪詢、REST client 呼叫 | `http.httpBasic(...)` — 無 session，每個請求都重新驗證 |
+
+登出**刻意寫成 `LoginController` 的 GET handler**（繞過預設對 `POST /logout` 的 CSRF 檢查），內部手動呼叫 `SecurityContextLogoutHandler`。
+
+#### ④ CSRF — 預設全開，四個路徑豁免
+
+```java
+http.csrf(csrf -> csrf
+        .ignoringRequestMatchers(PathRequest.toH2Console())  // H2 console 的表單不合規
+        .ignoringRequestMatchers("/api/**")                  // 吃 JSON、由程式呼叫
+        .ignoringRequestMatchers("/spring-data-api/**")
+        .ignoringRequestMatchers("/myWeb/actuator/**"));
+```
+
+判準是「**是不是瀏覽器表單提交**」—— 是就要 CSRF token，不是就豁免。
+
+#### ⑤ 前端整合 — Thymeleaf 依角色顯示不同內容
+
+`thymeleaf-extras-springsecurity6` 提供 `sec:` 屬性，讓模板直接判斷登入狀態與角色：
+
+```html
+<div sec:authorize="hasRole('ROLE_ADMIN')">  <!-- dashboard.html：只有管理員看得到 -->
+<a sec:authorize="isAuthenticated()" th:href="@{/dashboard}">個人儀表板</a>
+<a sec:authorize="isAnonymous()" th:href="@{/login}">登入</a>   <!-- navbar.html -->
+```
+
+後端擋路徑、前端藏入口 —— **兩層都要做**，只藏 UI 不擋路徑等於沒防護。
+
+#### ⑥ 稽核串接
+
+`AuditAwareImpl` 從 `SecurityContextHolder` 取出登入者 email，餵給 `@CreatedBy` / `@LastModifiedBy`；未登入時退回 `"anonymousUser"`（**未登入註冊**時要靠這個才寫得進 `person.created_by`）。
+
+> ⚠️ 幾個 **dev 專用、正式環境要改**的設定：`frameOptions().disable()`（為了讓 H2 console 用 iframe，有 clickjacking 風險）、actuator `exposure.include=*`、以及 8082 的三個 client 把 admin 帳密寫死在原始碼。
 
 ### 🧩 同一份資料，四種存取風格並陳
 
@@ -559,47 +608,30 @@ public String viewContactMessage(Model model,
 
 ## 4. 技術棧
 
-### 共通
-
-| 項目 | 版本 / 說明 |
+| 分類 | 使用 |
 |---|---|
-| Java | **25** |
-| Spring Boot | **4.1.0**（`spring-boot-starter-parent`，三個模組各自宣告） |
-| 建置工具 | Maven Wrapper（`mvnw` / `mvnw.cmd`）— 無需另外安裝 Maven |
-| Lombok | `optional=true`；全 codebase 使用 `@Slf4j` / `@RequiredArgsConstructor` / `@Data` |
+| 語言 | **Java 25** |
+| 框架 | **Spring Boot 4.1.0**、Spring Cloud **2025.1.2**（Oakwood，僅 `ConsumingRestService`） |
+| 建置 | Maven Wrapper（`mvnw` / `mvnw.cmd`，不需另裝 Maven） |
+| 前端 | **Thymeleaf 3.1.5** |
+| 安全 | **Spring Security 7.1.0** + BCrypt |
+| 持久層 | Spring Data JPA（**Hibernate 7.4**）、Spring Data REST |
+| 資料庫 | **H2** in-memory + H2 Console |
+| 監控 | Actuator + **Spring Boot Admin 4.1.2** |
+| HTTP client | OpenFeign / RestTemplate / WebClient |
+| 工具 | Lombok、devtools |
 
-### MyWeb
+各模組的主要依賴：
 
-| 領域 | 依賴 |
+| 模組 | 依賴 |
 |---|---|
-| Web | `spring-boot-starter-webmvc`（Boot 4 建議命名，取代已 deprecated 的 `starter-web`） |
-| 安全 | `spring-boot-starter-security`（**Spring Security 7.1.0**，版本由 Boot BOM 管理）+ `thymeleaf-extras-springsecurity6` `3.1.5`（artifact 名仍是 `springsecurity6`，但相容 Security 7）|
-| 視圖 | `spring-boot-starter-thymeleaf`（**Thymeleaf 3.1.5** + `thymeleaf-spring6` 整合層）— controller 回傳字串解析為 `templates/<name>.html`，devtools 會自動關閉 `spring.thymeleaf.cache` 以支援模板熱重載 |
-| 持久層 | `spring-boot-starter-data-jpa`（Hibernate 7）+ `spring-boot-starter-data-rest` |
-| 資料庫 | H2 in-memory + **`spring-boot-h2console`**（Boot 4 拆出的獨立模組） |
-| 內容協商 | `jackson-dataformat-xml`（讓 `@RestController` 依 `Accept` 回 JSON 或 XML） |
-| HAL Explorer | `spring-data-rest-hal-explorer` |
-| 監控 | `spring-boot-starter-actuator` + `hibernate-micrometer`（groupId **`org.hibernate.orm`**）+ `spring-boot-admin-starter-client` **4.1.2** |
-| 驗證 / 開發 | `spring-boot-starter-validation`、`spring-boot-devtools` |
+| **MyWeb** | `starter-webmvc`、`starter-security`、`starter-thymeleaf`、`starter-data-jpa`、`starter-data-rest`、`starter-validation`、`starter-actuator`、`spring-boot-h2console`、`h2`、`spring-data-rest-hal-explorer`、`thymeleaf-extras-springsecurity6`、`jackson-dataformat-xml`、`hibernate-micrometer`、`spring-boot-admin-starter-client`、`devtools`、`lombok` |
+| **ConsumingRestService** | `starter-webmvc`、`starter-restclient`、`starter-webflux`、`spring-cloud-starter-openfeign`、`spring-cloud-starter-loadbalancer`、`devtools`、`lombok` |
+| **AdminActuator** | `starter-webmvc`、`spring-boot-admin-starter-server` |
 
-> ⚠️ **AOP 沒有直接依賴。** `pom.xml` 裡**沒有** `spring-boot-starter-aop`；`LoggerAspect` 能運作是因為
-> `spring-boot-starter-data-jpa` → `spring-boot-data-jpa` → `spring-aspects` → **`aspectjweaver 1.9.25.1`** 這條傳遞鏈。
-> 若哪天移除或替換 JPA 依賴，aspect 會**無聲失效** — 那時請補上 `spring-boot-starter-aop`。
+> ⚠️ Spring Boot Admin 的 `spring-boot-admin.version` 在 `MyWeb`（client）與 `AdminActuator`（server）兩邊**必須一致**，目前都是 `4.1.2`。
 
-### ConsumingRestService
-
-| 領域 | 依賴 |
-|---|---|
-| Spring Cloud | **2025.1.2（Oakwood release train）** — 對應 Boot 4.1 |
-| 宣告式 client | `spring-cloud-starter-openfeign` |
-| 阻塞式 client | **`spring-boot-starter-restclient`**（Boot 4 拆分後 `RestTemplateBuilder` 的所在模組） |
-| 反應式 client | `spring-boot-starter-webflux`（提供 `WebClient`） |
-
-### AdminActuator
-
-依賴極簡 — 只有 `spring-boot-starter-webmvc` + `spring-boot-admin-starter-server` **4.1.2**。
-
-> ⚠️ **版本鏈鎖定**：SBA 4.1.x 對應 Boot 4.1，且 client（`MyWeb`）與 server（`AdminActuator`）兩邊的 `spring-boot-admin.version` **必須一致**。
+> 📌 Boot 4 有幾個依賴改名或拆分（`starter-web` → `starter-webmvc`、H2 Console 獨立成模組等），整理在[附錄的升級筆記](#boot-4--java-25-升級筆記)。
 
 ---
 
