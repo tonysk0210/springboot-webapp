@@ -189,22 +189,10 @@ flowchart TD
 | 模組 | 對外提供 | 依賴誰 |
 |---|---|---|
 | **MyWeb** `:8081` | Thymeleaf UI、`/api/contact/**`、Spring Data REST、Actuator、H2、Spring Security | 無（可獨立啟動） |
-| **ConsumingRestService** `:8082` | `/getMessages`、`/saveMessages`、`/saveMessagesWebClient` | **MyWeb**（三個 client 的目標網址都寫死在 Java 原始碼裡，見下方） |
+| **ConsumingRestService** `:8082` | `/getMessages`、`/saveMessages`、`/saveMessagesWebClient` | **MyWeb**（三個 client 的目標網址都寫死在原始碼裡） |
 | **AdminActuator** `:8083` | Boot Admin Server Web UI | 被 MyWeb 註冊，再反向持續輪詢 MyWeb |
 
 **啟動相依性**：`MyWeb` 可獨立跑；`MyWeb` 預設會向 8083 註冊（`spring.boot.admin.client.enabled=true`），所以 **`AdminActuator` 建議先啟動**，否則 console 會一直刷連線失敗。
-
-> ⚠️ **`ConsumingRestService` 的目標網址寫死在 Java 原始碼裡，共三處**（不是只有 Feign）：
->
-> | 檔案:行 | 使用的 client | 寫死的值 |
-> |---|---|---|
-> | `proxy/OpenFeignRestClient.java:18` | Feign | `@FeignClient(url = "http://localhost:8081/api/contact")` |
-> | `controller/ContactRestController.java:56` | RestTemplate | `String uri = "http://localhost:8081/api/contact/saveContactMessage"` |
-> | `controller/ContactRestController.java:82` | WebClient | 同上 |
->
-> 三處都是**編譯期常數** —— 換環境要改程式碼重編譯，不能用環境變數或 `--server.port` 之類的參數覆寫。
-> 對照之下，`MyWeb` 指向 Admin Server 的位址放在 `application.properties`（`spring.boot.admin.client.url` 等），**可以外部覆寫**。
-> 要改善的話，把這三處抽到 `@ConfigurationProperties`（例如 `myweb.api.base-url`）集中管理。
 
 ### 目錄結構
 
@@ -250,10 +238,10 @@ springboot-webapp/
 
 ```mermaid
 erDiagram
-    PERSON }o--|| ROLE : "role_id"
-    PERSON }o--|| PLAN : "plan_id"
-    PERSON ||--o| ADDRESS : "address_id"
-    PERSON }o--o{ COURSE : "person_courses"
+    PERSON }o--|| ROLE    : "role_id NOT NULL"
+    PERSON }o--o| PLAN    : "plan_id NULL"
+    PERSON ||--o| ADDRESS : "address_id NULL"
+    PERSON }o--o{ COURSE  : "person_courses"
     CONTACT {
         int contact_id
         string status "OPEN / CLOSED"
@@ -262,6 +250,30 @@ erDiagram
         int news_id "非 JPA — 用 JdbcTemplate 讀取"
     }
 ```
+
+**怎麼看這張圖** — 線兩端的符號（鴉爪記號）表示「這一端可以有幾筆」，靠近誰就描述誰：
+
+| 符號 | 讀作 |
+|---|---|
+| `\|\|` | 剛好一筆（必填） |
+| `o\|` | 零或一筆（選填） |
+| `}o` / `o{` | 零到多筆 |
+
+逐條關聯：
+
+| 關聯 | 外鍵位置 | 讀法 | 對應程式 |
+|---|---|---|---|
+| `PERSON }o--\|\| ROLE` | `person.role_id` **NOT NULL** | 多個使用者共用一個角色；**每個使用者一定要有角色** | `@ManyToOne(optional = false)` |
+| `PERSON }o--o\| PLAN` | `person.plan_id` **NULL** | 多個使用者可屬於同一方案；**也可以沒有方案** | `@ManyToOne`（未設 `optional=false`） |
+| `PERSON \|\|--o\| ADDRESS` | `person.address_id` **NULL** | 一個使用者最多一筆地址；**註冊時不填，之後在個人資料補** | `@OneToOne(cascade = MERGE)` |
+| `PERSON }o--o{ COURSE` | 中介表 `person_courses` | 一個學生可選多門課，一門課可被多人選 | `@ManyToMany` + `@JoinTable` |
+| `CONTACT`、`NEWS` | 無 | **獨立資料表，沒有任何外鍵** | 見下表 |
+
+三個補充重點：
+
+1. **外鍵全部集中在 `person` 表上** —— `role_id`、`address_id`、`plan_id` 三個欄位都在 `person`，所以 `PERSON` 是這張圖唯一的「中心」，其他表彼此不相連。
+2. **`person_courses` 是純中介表** —— 只有 `person_id` + `course_id` 兩欄，並以兩者為**複合主鍵**，因此同一個學生無法重複報名同一門課（資料庫層級就擋掉）。
+3. **owning side 與 inverse side** —— `Person.plan`、`Person.courses` 是 **owning side**（負責寫入 FK 與中介表）；`Plan.persons`、`Course.persons` 標了 `mappedBy`，是**唯讀視角**，直接改動它們不會寫進資料庫。
 
 | 類別 | 類型 | 注意事項 |
 |---|---|---|
