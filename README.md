@@ -7,7 +7,9 @@
 <p>
   <img alt="Java" src="https://img.shields.io/badge/Java-25-orange">
   <img alt="Spring Boot" src="https://img.shields.io/badge/Spring%20Boot-4.1.0-6DB33F">
+  <img alt="Spring Security" src="https://img.shields.io/badge/Spring%20Security-7.1.0-6DB33F">
   <img alt="Spring Cloud" src="https://img.shields.io/badge/Spring%20Cloud-2025.1.2%20Oakwood-6DB33F">
+  <img alt="Thymeleaf" src="https://img.shields.io/badge/Thymeleaf-3.1.5-005F0F">
   <img alt="Build" src="https://img.shields.io/badge/build-Maven%20Wrapper-C71A36">
   <img alt="DB" src="https://img.shields.io/badge/DB-H2%20in--memory-0000BB">
 </p>
@@ -351,8 +353,8 @@ pages.css        單一頁面的樣式覆寫
 | 領域 | 依賴 |
 |---|---|
 | Web | `spring-boot-starter-webmvc`（Boot 4 建議命名，取代已 deprecated 的 `starter-web`） |
-| 安全 | `spring-boot-starter-security` + `thymeleaf-extras-springsecurity6` |
-| 視圖 | `spring-boot-starter-thymeleaf` |
+| 安全 | `spring-boot-starter-security`（**Spring Security 7.1.0**，版本由 Boot BOM 管理）+ `thymeleaf-extras-springsecurity6` `3.1.5`（artifact 名仍是 `springsecurity6`，但相容 Security 7）|
+| 視圖 | `spring-boot-starter-thymeleaf`（**Thymeleaf 3.1.5** + `thymeleaf-spring6` 整合層）— controller 回傳字串解析為 `templates/<name>.html`，devtools 會自動關閉 `spring.thymeleaf.cache` 以支援模板熱重載 |
 | 持久層 | `spring-boot-starter-data-jpa`（Hibernate 7）+ `spring-boot-starter-data-rest` |
 | 資料庫 | H2 in-memory + **`spring-boot-h2console`**（Boot 4 拆出的獨立模組） |
 | 內容協商 | `jackson-dataformat-xml`（讓 `@RestController` 依 `Accept` 回 JSON 或 XML） |
