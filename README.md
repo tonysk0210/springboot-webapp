@@ -335,8 +335,6 @@ private Set<Course> courses = new HashSet<>();             // 型別 Course → 
 | **Spring Data REST** | `/spring-data-api/**` | 零程式碼自動 CRUD + HAL Explorer |
 | **三種 HTTP client** | 8082 的三個端點 | Feign（宣告式）／RestTemplate（阻塞）／WebClient（反應式） |
 
-`ContactRepository` 更刻意示範了**四種查詢寫法對照**：Derived query、`@Query` JPQL、`@NamedQuery`、`@Modifying` UPDATE。
-
 ### 📊 AOP 全域執行時間記錄（含切點取捨）
 
 `aspect/LoggerAspect` 的兩個 advice **切點範圍刻意不同**：
@@ -431,7 +429,11 @@ int updateStatusById(String status, String updatedBy, int id);
 - **`@Modifying`** —— 告訴 Spring Data 改用 `executeUpdate()` 而非 `getResultList()` 執行，回傳值因此是**受影響的列數**（`ContactService` 用 `> 0` 判斷成功）
 - **`@Transactional`** —— UPDATE / DELETE 必須在交易內，否則拋 `TransactionRequiredException`
 
-⚠️ **稽核欄位要手動填。** 平常 `repository.save(entity)` 會先把 Entity 載入記憶體，Hibernate 才有物件可攔截，`AuditingEntityListener` 就在這時自動補上 `updatedBy` / `updatedAt`。但 bulk update **全程不載入任何 Entity**，直接把 UPDATE 丟給資料庫 —— 沒有物件就沒有攔截點，稽核機制完全不會被觸發。
+⚠️ **稽核欄位要手動填。** 平常 `repository.save(entity)` 會先把 Entity 載入記憶體，Hibernate 才有物件可攔截，`AuditingEntityListener` 就在這時自動補上 `updatedBy` / `updatedAt`。但 JPQL 的 `UPDATE` / `DELETE`（JPA 稱為 **bulk operation**）**全程不載入任何 Entity**，直接把語句丟給資料庫 —— 沒有物件就沒有攔截點，稽核機制完全不會被觸發。
+
+> 這只影響 `UPDATE` / `DELETE`。JPQL 的 `SELECT`（例如上面 ② 的分頁查詢）回傳的是真正受管理的 Entity，改完再 `save()` 稽核照樣生效。
+>
+> 另一個副作用：bulk operation 直接改 DB，**已載入記憶體的 Entity 不會同步**，會變成過期資料。`AdminController.closeMessage` 靠改完後 redirect 重新查詢來避開這點。
 
 所以：
 
