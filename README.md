@@ -289,9 +289,9 @@ private Address address;                                   // 型別 Address →
 private Plan plan;                                         // 型別 Plan → 指向 plan 表
 
 @ManyToMany(fetch = FetchType.EAGER)
-@JoinTable(name = "person_courses",                        // 中介表
-        joinColumns = @JoinColumn(name = "person_id"),         // 我這側的欄位
-        inverseJoinColumns = @JoinColumn(name = "course_id"))  // 對面那側的欄位
+@JoinTable(name = "person_courses",                            // 中介表名稱
+        joinColumns = @JoinColumn(name = "person_id"),         // 指回「本類別 Person」→ person_courses.person_id
+        inverseJoinColumns = @JoinColumn(name = "course_id"))  // 指向「集合元素 Course」→ person_courses.course_id
 private Set<Course> courses = new HashSet<>();             // 型別 Course → 指向 courses 表
 ```
 
