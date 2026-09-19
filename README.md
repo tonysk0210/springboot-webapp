@@ -15,13 +15,13 @@
 整個 repo 的重點不在業務複雜度，而在**同一份資料用多種 Spring 技術棧實作一遍**，方便對照學習。
 
 <p>
-  <img alt="Java" src="https://img.shields.io/badge/Java-25-orange">
-  <img alt="Spring Boot" src="https://img.shields.io/badge/Spring%20Boot-4.1.0-6DB33F">
-  <img alt="Spring Security" src="https://img.shields.io/badge/Spring%20Security-7.1.0-6DB33F">
-  <img alt="Spring Cloud" src="https://img.shields.io/badge/Spring%20Cloud-2025.1.2%20Oakwood-6DB33F">
-  <img alt="Thymeleaf" src="https://img.shields.io/badge/Thymeleaf-3.1.5-005F0F">
-  <img alt="Build" src="https://img.shields.io/badge/build-Maven%20Wrapper-C71A36">
-  <img alt="DB" src="https://img.shields.io/badge/DB-H2%20in--memory-0000BB">
+  <img alt="Java" src="https://img.shields.io/badge/Java-25-orange?logo=openjdk&logoColor=white">
+  <img alt="Spring Boot" src="https://img.shields.io/badge/Spring%20Boot-4.1.0-6DB33F?logo=springboot&logoColor=white">
+  <img alt="Spring Security" src="https://img.shields.io/badge/Spring%20Security-7.1.0-6DB33F?logo=springsecurity&logoColor=white">
+  <img alt="Spring Cloud" src="https://img.shields.io/badge/Spring%20Cloud-2025.1.2%20Oakwood-6DB33F?logo=spring&logoColor=white">
+  <img alt="Thymeleaf" src="https://img.shields.io/badge/Thymeleaf-3.1.5-005F0F?logo=thymeleaf&logoColor=white">
+  <img alt="Build" src="https://img.shields.io/badge/Maven-Wrapper-C71A36?logo=apachemaven&logoColor=white">
+  <img alt="DB" src="https://img.shields.io/badge/H2-in--memory-0000BB?logo=h2database&logoColor=white">
 </p>
 
 | 模組 | Port | 一句話定位 |
