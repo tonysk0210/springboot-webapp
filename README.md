@@ -337,19 +337,6 @@ private Set<Course> courses = new HashSet<>();             // 型別 Course → 
 
 `ContactRepository` 更刻意示範了**四種查詢寫法對照**：Derived query、`@Query` JPQL、`@NamedQuery`、`@Modifying` UPDATE。
 
-### 📖 每一頁都內嵌「這頁背後的 Spring 原理」
-
-這是 SpringWise 最特別的地方 —— **15 個頁面各自帶一段教學說明**，放在 `templates/text/*Description.html`，以 Thymeleaf fragment 嵌在頁面下方，內容包含該頁用到的 Spring 機制與實際程式碼片段。例如：
-
-| 頁面 | 說明的主題 |
-|---|---|
-| `dashboardDescription` | Spring Security 登入後如何導向 Dashboard 並從 `Authentication` 取回 `Person` |
-| `planPageDescription` | `@ModelAttribute` 為何在每次進入頁面時自動執行 |
-| `signUpCoursesDescription` | 多對多關聯下「已註冊課程」的判斷邏輯 |
-| `viewPlanDetailDescription` | `Set<Person>` 的迴圈渲染與雙向關聯維護 |
-
-也就是說，**這個 app 本身就是它自己的教材** — 操作畫面與原理解說在同一頁。
-
 ### 📊 AOP 全域執行時間記錄（含切點取捨）
 
 `aspect/LoggerAspect` 的兩個 advice **切點範圍刻意不同**：
@@ -359,39 +346,6 @@ private Set<Course> courses = new HashSet<>();             // 型別 Course → 
 @AfterThrowing("anyMyWebMethod()") // com.company.myweb..* — 例外全範圍記錄
 ```
 
-原因是 actuator 走 Basic Auth 且**無 session**，Admin Server 每次輪詢都會重新驗證一次；若 `@Around` 全攔，單次輪詢就會刷出 7 行 log 並把 BCrypt hash 印進檔案。這是個「AOP 切點必須配合實際流量設計」的真實案例。
-
-### 🏷️ 自訂 Actuator `/info` 內容
-
-`config/MyWebActuatorInfoContributor` 實作 `InfoContributor`，Spring Boot 會自動偵測並把資料掛在 `myWeb-info` 這個 key 底下 —— 同時出現在 `/myWeb/actuator/info` 的 JSON 與 **Boot Admin 儀表板的「資訊」卡片**（見上方截圖）。
-
-```java
-@Component
-public class MyWebActuatorInfoContributor implements InfoContributor {
-    @Override
-    public void contribute(Info.Builder builder) {
-        builder.withDetail("myWeb-info", Map.of("App Name", "MyWeb", "App Version", "1.0.0", ...));
-    }
-}
-```
-
-### 📁 log 落檔 + 線上調整 log level
-
-- log 同時輸出到 console（ANSI 彩色）與 `MyWeb/logs/myweb.log`
-- 設定 `logging.file.name` 才會註冊 **`/myWeb/actuator/logfile`** 端點 → Boot Admin 的 **Logfile** 頁籤才有內容
-- 檔案 pattern 用 `%replace` 剝掉訊息內嵌的 ANSI 碼，避免 log 檔出現 `[95m` 亂碼
-- 想看 SQL 時**不要**用 `spring.jpa.show-sql`（它繞過 Logback），改用可線上開關的：
-
-```bash
-curl -u admin@gmail.com:admin -X POST -H "Content-Type: application/json" \
-  -d '{"configuredLevel":"DEBUG"}' \
-  http://localhost:8081/myWeb/actuator/loggers/org.hibernate.SQL
-```
-
-### 🗄️ `schema.sql` 是 schema 的唯一真相
-
-`spring.jpa.hibernate.ddl-auto=validate` — Hibernate 只在啟動時**驗證** Entity 是否對應現有 schema，**不會**依 Entity 改動 DB。欄位不符就直接啟動失敗，強迫 `sql/schema.sql` 與 `model/` 保持同步。
-
 ### ✅ 自訂 Bean Validation
 
 `myValidation/` 下有兩個自製 annotation：
@@ -400,18 +354,6 @@ curl -u admin@gmail.com:admin -X POST -H "Content-Type: application/json" \
 - `@FieldValueMatchValidator` — **class 層級**，用於檢查 `Person` 的 `password`/`confirmPassword` 與 `email`/`confirmEmail` 是否一致
 
 （各自搭配一個 `*Impl` 實作 `ConstraintValidator`。）
-
-### 🎨 CSS 三層架構
-
-`templates/` 只 link `app.css`，由它以 `@import` 串接三層（順序即優先序）：
-
-```
-foundation.css   設計 token（顏色、字級、間距、breakpoint）
-    ↓
-components.css   跨頁重用的 BEM 元件（navbar、卡片、表單）
-    ↓
-pages.css        單一頁面的樣式覆寫
-```
 
 ---
 
