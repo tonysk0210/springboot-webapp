@@ -363,7 +363,7 @@ http.csrf(csrf -> csrf
 
 #### ⑥ 稽核串接
 
-`AuditAwareImpl` 從 `SecurityContextHolder` 取出登入者 email，餵給 `@CreatedBy` / `@LastModifiedBy`；未登入時退回 `"anonymousUser"`（**未登入註冊**時要靠這個才寫得進 `person.created_by`）。
+`AuditAwareImpl` 從 `SecurityContextHolder` 取出登入者 email，餵給 `@CreatedBy` / `@LastModifiedBy`；未登入時退回 `"anonymousUser"`。
 
 ### 🧩 同一份資料，四種存取風格並陳
 

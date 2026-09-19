@@ -14,6 +14,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 三個模組皆綁定 Spring Boot **4.1.0** + Java **25**；`ConsumingRestService` 額外用 Spring Cloud **2025.1.2 (Oakwood)**。`MyWeb` 與 `AdminActuator` 使用 codecentric spring-boot-admin **4.1.2**。
 
+**每個模組都有自己的 `CLAUDE.md`，內含該模組的細節與已知陷阱** —— 動特定模組時請以那份為準，本檔只保留跨模組的共通資訊與 `MyWeb` 的架構總覽：
+
+- [`MyWeb/CLAUDE.md`](./MyWeb/CLAUDE.md)
+- [`ConsumingRestService/CLAUDE.md`](./ConsumingRestService/CLAUDE.md)
+- [`AdminActuator/CLAUDE.md`](./AdminActuator/CLAUDE.md)
+
 ## 常用指令
 
 以下指令請在對應模組目錄下執行（`MyWeb/`、`AdminActuator/` 或 `ConsumingRestService/`）：
@@ -38,7 +44,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 .\mvnw.cmd resources:resources
 ```
 
-本機執行整套服務的典型順序：預設 `MyWeb` 的 Boot Admin client 為 **關閉**，可直接啟動 `MyWeb`；要監控時再啟動 `AdminActuator` 並把 `spring.boot.admin.client.enabled` 改為 `true`。若要測試 Feign client 才啟動 `ConsumingRestService`。三個 JVM 各佔一個 port，請在不同終端機分別啟動。
+本機執行整套服務的典型順序：**先啟動 `AdminActuator`（8083）再啟動 `MyWeb`** —— `spring.boot.admin.client.enabled` 目前是 `true`，MyWeb 啟動時會主動去 8083 註冊，8083 沒開的話 console 會一直刷連線失敗。只想單獨跑 MyWeb 就把該屬性改成 `false`。若要測試三種 HTTP client 才啟動 `ConsumingRestService`（8082）。三個 JVM 各佔一個 port，請在不同終端機分別啟動。
 
 測試框架：**JUnit 5 + Spring Boot Test + Spring Security Test**（`MyWeb` 已引入 dependencies）。測試類命名 `*Tests`；測試方法以行為描述（例：`registerRejectsDuplicateEmail()`）。目前 `src/test/java` 除了空的 `MyWebApplicationTests` 之外都尚無內容，是接下來要補上的區塊。
 
@@ -54,8 +60,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - 使用內嵌 **H2** 記憶體資料庫（`jdbc:h2:mem:mydb`），Console 位於 `http://localhost:8081/h2-console`。⚠️ **devtools 熱重載會讓資料歸零** —— 關閉舊 ApplicationContext 時 Spring 的 `inMemoryDatabaseShutdownExecutor` 會關掉內嵌 DB，重啟後 `schema.sql` + `data.sql` 重跑，AUTO_INCREMENT 也重置。開發時請預期「改 Java 程式碼 → 手動建立的測試資料消失」。註：連線字串原本帶 `DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE`，實測在目前配置下無可觀察效果（HikariCP 預設 `minimumIdle = maximumPoolSize = 10`，連線數不會歸零）故已移除；日後補整合測試或把 `minimum-idle` 調成 0 時可能需要加回 `DB_CLOSE_DELAY=-1`
 - **`src/main/resources/sql/schema.sql` 是 schema 的唯一真相** — `spring.jpa.hibernate.ddl-auto=validate`，Hibernate 只在啟動時 **驗證** JPA Entity 對應現有 schema（型別/欄位缺失就直接啟動失敗，**不會** 依 Entity 修改 DB）。新增/變更欄位時：改 `sql/schema.sql` DDL **並** 同步 `model/` 底下 Entity 標註，兩邊不一致啟動就會炸
 - 初始資料（含兩個 BCrypt 加密的預設帳號：`admin@gmail.com` / `admin` 與 `student@gmail.com` / `student`）放在 `src/main/resources/sql/data.sql`；路徑透過 `spring.sql.init.{schema,data}-locations` 明確指定
-- JPA Entity：`Person`、`Roles`、`Address`、`Plan`、`Courses`、`Contact`。`Person` 擁有到 `Roles`、`Address`、`Plan` 的外鍵，並透過 `person_courses` 中介表對 `Courses` 做多對多 — 全部為 `FetchType.EAGER`
+- JPA Entity：`Person`、`Role`、`Address`、`Plan`、`Course`、`Contact`（**單數**）。外鍵全部集中在 `person` 表上（`role_id` NOT NULL、`address_id` / `plan_id` 可為 NULL），並透過 `person_courses` 中介表（複合主鍵，DB 層擋重複選課）對 `Course` 做多對多。`Person` 的四個關聯**全部 `FetchType.EAGER`**，所以查一次 `Person` 會連帶發出 3~5 筆 SQL
+- ⚠️ **唯一的 `LAZY` 是 `Plan.persons`**，而 `viewPlanDetail.html` 在**模板渲染階段**才存取它 → 這頁依賴 `spring.jpa.open-in-view=true`（目前未設定，走預設 true）。**不要為了消掉啟動 WARN 就把 open-in-view 關掉**，會讓該頁噴 `LazyInitializationException`；真要關必須先把 `AdminController.viewPlanDetail` 改成 fetch join / `@EntityGraph`
+- ⚠️ `Person.courses` 與 `Course.persons` **雙向都是 EAGER**，載入一個 Person 會連鎖撈出「同課程的其他學生及其 address/plan/role」。資料量變大時先把 `Course.persons` 改 `LAZY` 切斷傳染鏈
 - 稽核欄位來自 `model/BaseEntity`；`Person` **刻意覆蓋** `createdBy` 欄位，以避免未登入註冊時 insert 失敗
+- ⚠️ `spring.jpa.properties.jakarta.persistence.validation.mode=none` **不可拿掉**：註冊流程先通過 MVC 驗證、再把密碼 BCrypt 加密，此時 `password` 已與 `confirmPassword` 不同；若讓 Hibernate 在存檔前再驗一次，`Person` 上的 `@FieldValueMatchValidator` 會誤判成「兩次密碼不一致」而讓註冊失敗。**前綴必須是 `jakarta.*`**（`javax.*` 是舊名，Hibernate 會發 HHH90000021 警告，將來被移除就會靜默失效 → 註冊壞掉）
+- ⚠️ `@Modifying` 的 bulk UPDATE/DELETE（例：`ContactRepository.updateStatusById`）**不經過 Entity、不觸發 `AuditingEntityListener`** → 稽核欄位要手動寫進 JPQL，呼叫端也得自己把 `authentication.getName()` 傳進來
 - `model/` 底下有 **兩個非 JPA 類別**，勿誤加 `@Entity`：
   - `News` — 純 POJO，透過 `NewsRepository` 用 **`JdbcTemplate` + `BeanPropertyRowMapper`** 讀取；`news` 表只存在於 `schema.sql`
   - `Profile` — 表單/傳輸用 DTO（更新個人資料流程使用），不入庫，帶自己的 Bean Validation 註解
@@ -85,8 +95,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - 網頁 UI：`/`、`/home`、`/about`、`/contact`、`/news`、`/login`；註冊在 **`/public/register`**（表單 POST 到 `/public/createUser`）— `PublicController` 有 class 層 `@RequestMapping("/public")`
 - 自訂 REST：`/api/contact/*`（見 `ContactRestController`）
 - Spring Data REST 自動端點：`/spring-data-api/**`（HAL Explorer 位於 `/spring-data-api/`）
-- Actuator：`/myWeb/actuator/**`（所有端點皆開啟 — `management.endpoints.web.exposure.include=*`）
-- Boot Admin client **預設關閉**（`spring.boot.admin.client.enabled=false`），避免 `AdminActuator` 未啟動時 log 洗版。要恢復監控：將該屬性改為 `true` 並先啟動 `AdminActuator`（8083）。註冊時使用 instance metadata 內的 `admin@gmail.com` / `admin` 做 Basic Auth 讓 Admin server 回呼健康檢查
+- Actuator：`/myWeb/actuator/**`（**13 個端點全開** — `management.endpoints.web.exposure.include=*`，生產環境應改白名單）。`config/MyWebActuatorInfoContributor` 實作 `InfoContributor`，把自訂資料掛在 `/info` 的 `myWeb-info` key 下（同時顯示在 Boot Admin 的「資訊」卡片）。`/myWeb/actuator/loggers/{name}` 可**線上調 log level 免重啟**，是查 SQL（`org.hibernate.SQL`）與追認證流程（`com.company.myweb.config.security`）的主要手段；`/myWeb/actuator/logfile` 則靠 `logging.file.name` 才會註冊
+- Boot Admin client **目前為開啟**（`spring.boot.admin.client.enabled=true`）→ 啟動 MyWeb 前請先起 `AdminActuator`（8083），否則 console 會刷連線失敗。註冊時使用 instance metadata 內的 `admin@gmail.com` / `admin` 做 Basic Auth 讓 Admin server 回呼。實測輪詢頻率：`/health` 約每 20 秒、`/info` 約每 60 秒；Admin UI 開著時還會多抓 `/metrics/**`（約每分鐘一波 20+ 個請求）。**actuator 走 Basic Auth 且無 session，每個請求都會完整跑一次 `UsernamePwdAuthenticationProvider`（含 BCrypt 與 3 筆 SQL）** — 這是 log 容易被洗版的根源
 
 ### 自訂應用程式屬性
 前綴為 `myweb.*`，於 `config/MyWebProperties` 以 `@Validated` 綁定。目前只有 `myweb.paginationPageSize`（範圍 5–10）。新增可調參數請集中在此處，不要用 `@Value` 到處散落。
@@ -118,7 +128,10 @@ log 同時落地為檔案（`logging.file.name=MyWeb/logs/myweb.log`，已加入
 
 - `@EnableFeignClients(basePackages = "com.company.ConsumingRestService.proxy")` 啟用 `proxy/OpenFeignRestClient` Feign 介面
 - 目標網址**寫死在原始碼三處**（必須先啟動 MyWeb）：`proxy/OpenFeignRestClient.java` 的 `@FeignClient(url=...)`、`controller/ContactRestController` 內 RestTemplate 與 WebClient 各自的 `String uri` 區域變數。改網址要三處一起改；要外部化請抽成 `@ConfigurationProperties`。DTO 位於 `dto/`（`Contact`、`Response`），非 `model/`
-- `config/ProjectConfiguration` 定義了三個平行的 HTTP client（Feign、`RestTemplate`、`WebClient`），全部預先設定好 Basic Auth `admin@gmail.com` / `admin` — 呼叫端可依需求選擇對應的 client
+- `config/ProjectConfiguration` 定義了三個平行的 HTTP client（Feign、`RestTemplate`、`WebClient`），全部預先設定好 Basic Auth `admin@gmail.com` / `admin`（**帳密硬編碼三次**；8082 本身沒有 `spring-boot-starter-security`，等於一個無認證的代理）
+- 兩個寫入端點都**原樣傳遞上游 MyWeb 的 status code（201）**：`saveMessages` 回 `ResponseEntity<Response>`；`saveMessagesWebClient` 回 `Mono<ResponseEntity<Response>>`，用 `.retrieve().toEntity(Response.class)` 而非 `.bodyToMono(...)` —— 換回 `bodyToMono` 會丟掉狀態碼、這一層變成回 200
+- `OpenFeignRestClient` 方法上的 `feign.Headers` **不會生效**：Spring Cloud OpenFeign 預設用 `SpringMvcContract`，原生 Feign 註解不被處理（要用得自己覆寫 `Contract` bean）。而且 GET 沒有 body，指定 `Content-Type` 本來也沒意義
+- `spring-cloud-starter-loadbalancer` 目前形同未使用 —— `@FeignClient` 指定了 `url`，就會跳過服務發現與負載平衡
 - pom 同時引入 `spring-boot-starter-webmvc` 與 `spring-boot-starter-webflux`（因為同時用 `RestTemplate` 阻塞式與 `WebClient` 反應式）；另外 `spring-boot-starter-restclient` 是 Boot 4 拆分後 `RestTemplateBuilder` 的所在模組
 
 ## Boot 4 / Java 25 建置注意事項
