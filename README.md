@@ -682,7 +682,7 @@ cd ConsumingRestService
 | `logging.file.name` | `MyWeb/logs/myweb.log` | log 檔位置（相對於 repo 根） |
 | `spring.datasource.url` | `jdbc:h2:mem:mydb` | H2 記憶體資料庫 |
 | `spring.jpa.hibernate.ddl-auto` | `validate` | 只驗證、不動 DB |
-| `spring.jpa.properties.jakarta.persistence.validation.mode` | `none` | 註冊時密碼會先加密再存檔，此時 `password` 已與 `confirmPassword` 不同。Hibernate 預設在存檔前會**再驗一次**欄位，會把這個誤判成「兩次密碼不一致」而讓註冊失敗 —— 所以關掉（表單送出時 MVC 層已經驗過了）。屬性前綴用 `jakarta.*`，`javax.*` 是舊名已棄用 |
+| `spring.jpa.properties.jakarta.persistence.validation.mode` | `none` | 註冊時密碼會先加密再存檔，此時 `password` 已與 `confirmPassword` 不同。Hibernate 預設在存檔前會**再驗一次**欄位，會把這個誤判成「兩次密碼不一致」而讓註冊失敗 —— 所以關掉（表單送出時 MVC 層已經驗過了）|
 | `spring.data.rest.basePath` | `/spring-data-api` | Spring Data REST 前綴 |
 | `management.endpoints.web.base-path` | `/myWeb/actuator` | Actuator base path |
 | `management.endpoints.web.exposure.include` | `*` | 開放全部端點（**生產環境請改白名單**） |
