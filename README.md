@@ -189,10 +189,22 @@ flowchart TD
 | 模組 | 對外提供 | 依賴誰 |
 |---|---|---|
 | **MyWeb** `:8081` | Thymeleaf UI、`/api/contact/**`、Spring Data REST、Actuator、H2、Spring Security | 無（可獨立啟動） |
-| **ConsumingRestService** `:8082` | `/getMessages`、`/saveMessages`、`/saveMessagesWebClient` | **MyWeb**（Feign 網址寫死 8081） |
+| **ConsumingRestService** `:8082` | `/getMessages`、`/saveMessages`、`/saveMessagesWebClient` | **MyWeb**（三個 client 的目標網址都寫死在 Java 原始碼裡，見下方） |
 | **AdminActuator** `:8083` | Boot Admin Server Web UI | 被 MyWeb 註冊，再反向持續輪詢 MyWeb |
 
-**啟動相依性**：`MyWeb` 可獨立跑；`ConsumingRestService` 的 Feign 目標網址**寫死**指向 8081；`MyWeb` 預設會向 8083 註冊（`spring.boot.admin.client.enabled=true`），所以 **`AdminActuator` 建議先啟動**，否則 console 會一直刷連線失敗。
+**啟動相依性**：`MyWeb` 可獨立跑；`MyWeb` 預設會向 8083 註冊（`spring.boot.admin.client.enabled=true`），所以 **`AdminActuator` 建議先啟動**，否則 console 會一直刷連線失敗。
+
+> ⚠️ **`ConsumingRestService` 的目標網址寫死在 Java 原始碼裡，共三處**（不是只有 Feign）：
+>
+> | 檔案:行 | 使用的 client | 寫死的值 |
+> |---|---|---|
+> | `proxy/OpenFeignRestClient.java:18` | Feign | `@FeignClient(url = "http://localhost:8081/api/contact")` |
+> | `controller/ContactRestController.java:56` | RestTemplate | `String uri = "http://localhost:8081/api/contact/saveContactMessage"` |
+> | `controller/ContactRestController.java:82` | WebClient | 同上 |
+>
+> 三處都是**編譯期常數** —— 換環境要改程式碼重編譯，不能用環境變數或 `--server.port` 之類的參數覆寫。
+> 對照之下，`MyWeb` 指向 Admin Server 的位址放在 `application.properties`（`spring.boot.admin.client.url` 等），**可以外部覆寫**。
+> 要改善的話，把這三處抽到 `@ConfigurationProperties`（例如 `myweb.api.base-url`）集中管理。
 
 ### 目錄結構
 
@@ -557,7 +569,7 @@ java -jar target\MyWeb-0.0.1-SNAPSHOT.jar     # 執行打包好的 jar
 | 啟動時 `Schema-validation: missing table/column` | `ddl-auto=validate` 抓到 `sql/schema.sql` 與 Entity 不一致 — 同步兩邊 |
 | 呼叫 `/api/**` 回 **401** | 沒帶 Basic Auth 或權限不足（需 `ROLE_ADMIN`） |
 | `/public/register` 以外的註冊網址回 **404** | 註冊頁在 `/public/register`，表單 POST 到 `/public/createUser` |
-| Feign `ConnectException: Connection refused` | `OpenFeignRestClient` 目標寫死 `http://localhost:8081` — 先啟動 `MyWeb` |
+| `ConnectException: Connection refused`（8082 的任一端點） | 三個 client 的目標都寫死 `http://localhost:8081` — 先啟動 `MyWeb` |
 | console 一直刷 `authenticate` 與 SQL | Admin Server 正在輪詢；已透過收斂 `LoggerAspect` 切點與移除 `show-sql` 解決 — 若復發，檢查這兩處 |
 | Boot Admin UI 看不到 `MyWeb` | 確認 `spring.boot.admin.client.enabled=true` 且 `AdminActuator` 已在 8083 啟動 |
 | `@Slf4j` / `@Data` 未生效 | `maven-compiler-plugin` 缺少 Lombok annotation processor 宣告 |

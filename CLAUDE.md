@@ -117,7 +117,7 @@ log 同時落地為檔案（`logging.file.name=MyWeb/logs/myweb.log`，已加入
 ## ConsumingRestService 架構
 
 - `@EnableFeignClients(basePackages = "com.company.ConsumingRestService.proxy")` 啟用 `proxy/OpenFeignRestClient` Feign 介面
-- `OpenFeignRestClient` 目標網址為 `http://localhost:8081/api/contact`（**寫死** — 必須先啟動 MyWeb）。DTO 位於 `dto/`（`Contact`、`Response`），非 `model/`
+- 目標網址**寫死在原始碼三處**（必須先啟動 MyWeb）：`proxy/OpenFeignRestClient.java` 的 `@FeignClient(url=...)`、`controller/ContactRestController` 內 RestTemplate 與 WebClient 各自的 `String uri` 區域變數。改網址要三處一起改；要外部化請抽成 `@ConfigurationProperties`。DTO 位於 `dto/`（`Contact`、`Response`），非 `model/`
 - `config/ProjectConfiguration` 定義了三個平行的 HTTP client（Feign、`RestTemplate`、`WebClient`），全部預先設定好 Basic Auth `admin@gmail.com` / `admin` — 呼叫端可依需求選擇對應的 client
 - pom 同時引入 `spring-boot-starter-webmvc` 與 `spring-boot-starter-webflux`（因為同時用 `RestTemplate` 阻塞式與 `WebClient` 反應式）；另外 `spring-boot-starter-restclient` 是 Boot 4 拆分後 `RestTemplateBuilder` 的所在模組
 
