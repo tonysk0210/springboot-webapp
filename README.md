@@ -284,8 +284,8 @@ private Role roles;                                        // 型別 Role → �
 @JoinColumn(name = "address_id")                           // 存進 person.address_id（可為 NULL）
 private Address address;                                   // 型別 Address → 指向 address 表
 
-@ManyToOne(fetch = FetchType.EAGER)                        // 沒有 optional=false → 選填
-@JoinColumn(name = "plan_id")                              // 存進 person.plan_id（可為 NULL）
+@ManyToOne(fetch = FetchType.EAGER)                        // optional 預設 true → 選填，可為 null
+@JoinColumn(name = "plan_id")                              // 存進 person.plan_id（nullable 預設 true）
 private Plan plan;                                         // 型別 Plan → 指向 plan 表
 
 @ManyToMany(fetch = FetchType.EAGER)
@@ -294,18 +294,6 @@ private Plan plan;                                         // 型別 Plan → �
         inverseJoinColumns = @JoinColumn(name = "course_id"))  // 對面那側的欄位
 private Set<Course> courses = new HashSet<>();             // 型別 Course → 指向 courses 表
 ```
-
-各註解的分工 —— **搞清楚這個，圖跟程式就對得起來了**：
-
-| 註解 / 屬性 | 決定什麼 | 對應圖上哪部分 |
-|---|---|---|
-| **欄位的 Java 型別**（`Role`、`Plan`、`Address`、`Course`） | **指向哪張表** | 線連到哪個方塊 |
-| `@ManyToOne` / `@OneToOne` / `@ManyToMany` | **基數**（兩端各能有幾筆） | `}o` / `\|\|` / `o{` 的形狀 |
-| `optional = false`（或 `nullable = false`） | **必填與否** | 該端是 `\|\|` 還是 `o\|` |
-| `@JoinColumn(name = "...")` | 外鍵**存在本表的哪一欄** | 線上的標籤文字 |
-| `@JoinTable(...)` | 多對多的**中介表**與兩側欄位名 | `person_courses` 那條線 |
-
-⚠️ 最容易搞混的一點：**`@JoinColumn` 不是用來指定「對面是哪張表」的** —— 對面是哪張表由欄位型別決定（`private Role roles` → `roles` 表）。`@JoinColumn` 只負責回答「外鍵要存在 `person` 表的哪一欄」。
 
 三個補充重點：
 
