@@ -94,7 +94,7 @@ flowchart TD
 
 **個人資料** — `/profilePage`，以 `Profile` DTO（非 Entity）承載表單，含基本資料與地址資料
 
-![個人資料](docs/screenshots/student-profile.png)
+![個人資料](docs/screenshots/profile.png)
 
 </details>
 
