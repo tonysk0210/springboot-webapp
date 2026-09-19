@@ -19,7 +19,7 @@
                     <a class="site-nav__link" th:href="@{/about}">關於我們</a>
                     <a class="site-nav__link" th:href="@{/news}">最新消息</a>
                     <a class="site-nav__link" th:href="@{/contact}">聯絡我們</a>
-                    <a class="site-nav__link site-nav__link--accent" sec:authorize="isAuthenticated()" th:href="@{/dashboard}">控制台</a>
+                    <a class="site-nav__link site-nav__link--accent" sec:authorize="isAuthenticated()" th:href="@{/dashboard}">個人儀表板</a>
                 </div>
                 <div class="site-nav__group">
                     <a class="site-nav__link" sec:authorize="isAnonymous()" th:href="@{/login}">登入</a>

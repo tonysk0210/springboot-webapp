@@ -62,36 +62,82 @@ flowchart TD
 
 ### 畫面截圖
 
+> 展開下方分組可看其餘 9 張；所有截圖放在 [`docs/screenshots/`](./docs/screenshots)。
+
 #### 首頁
 
-![SpringWise 首頁 — hero 區與角色權限總覽](docs/screenshots/home.png)
+![SpringWise 首頁 — hero 區與使用者角色權限總覽](docs/screenshots/home.png)
 
-#### 待補的截圖
+<details>
+<summary><b>🔓 前台（不需登入）— 登入頁、註冊頁</b></summary>
 
-> 📸 把檔案放進 `docs/screenshots/`，然後**把下面對應那行從註解區塊移出來**（`<!--` / `-->` 之間的內容不會被渲染）。
+<br>
 
-| 檔名 | 擷取位置 | 需要的帳號 | 狀態 |
-|---|---|---|---|
-| `home.png` | <http://localhost:8081/> | 不需登入 | ✅ 已加入 |
-| `login.png` | <http://localhost:8081/login> | 不需登入 | ⬜ |
-| `register.png` | <http://localhost:8081/public/register> | 不需登入 | ⬜ |
-| `dashboard.png` | <http://localhost:8081/dashboard> | 任一帳號 | ⬜ |
-| `admin-contact.png` | <http://localhost:8081/admin/viewContactMessage/page/1> | `admin@gmail.com` | ⬜ |
-| `admin-plan.png` | <http://localhost:8081/admin/planPage> | `admin@gmail.com` | ⬜ |
-| `student-courses.png` | <http://localhost:8081/student/signUpCourses> | `student@gmail.com` | ⬜ |
-| `hal-explorer.png` | <http://localhost:8081/spring-data-api/> | `admin@gmail.com` | ⬜ |
-| `boot-admin.png` | <http://localhost:8083> | 不需登入（Admin Server 未設安全性）| ⬜ |
+**登入** — `/login`，由自訂的 `UsernamePwdAuthenticationProvider` 以 email + BCrypt 驗證
 
-<!--
 ![登入頁](docs/screenshots/login.png)
+
+**註冊** — `/public/register`，表單 POST 到 `/public/createUser`，套用 `@PasswordValidator` 與 `@FieldValueMatchValidator`
+
 ![註冊頁](docs/screenshots/register.png)
-![Dashboard](docs/screenshots/dashboard.png)
+
+</details>
+
+<details>
+<summary><b>👤 登入後 — 個人儀表板、個人資料</b></summary>
+
+<br>
+
+**個人儀表板** — `/dashboard`，依角色顯示不同入口（圖為 `ROLE_ADMIN`，有「查看聯絡訊息／管理方案／管理課程」三張卡片）
+
+![個人儀表板](docs/screenshots/dashboard.png)
+
+**個人資料** — `/profilePage`，以 `Profile` DTO（非 Entity）承載表單，含基本資料與地址資料
+
+![個人資料](docs/screenshots/student-profile.png)
+
+</details>
+
+<details>
+<summary><b>🛠️ 管理員後台 — 聯絡訊息、方案管理</b></summary>
+
+<br>
+
+**聯絡訊息** — `/admin/viewContactMessage/page/1`，**每頁 5 筆**（由 `myweb.paginationPageSize` 控制）、欄位可排序，右側「關閉」把狀態從 `OPEN` 改為 `CLOSED`
+
 ![後台 — 聯絡訊息管理](docs/screenshots/admin-contact.png)
+
+**方案管理** — `/admin/planPage`，`Plan` 的 CRUD；「查看」進入 `viewPlanDetail` 可增減該方案的學生
+
 ![後台 — 方案管理](docs/screenshots/admin-plan.png)
+
+</details>
+
+<details>
+<summary><b>🎓 學生 — 選課</b></summary>
+
+<br>
+
+**可選課程** — `/student/signUpCourses`，勾選後批次購買；已報名的課程會被 disable（由 `alreadyRegisteredCourses` 判斷）
+
 ![學生 — 報名課程](docs/screenshots/student-courses.png)
+
+</details>
+
+<details>
+<summary><b>🔧 開發者工具 — HAL Explorer、Boot Admin</b></summary>
+
+<br>
+
+**HAL Explorer** — `/spring-data-api/`，Spring Data REST 自動產生端點的互動式瀏覽器（需 `ROLE_ADMIN`）
+
 ![HAL Explorer](docs/screenshots/hal-explorer.png)
+
+**Spring Boot Admin** — <http://localhost:8083>，可看健康狀態、執行緒、CPU、環境變數、Bean、Logfile；左側「日誌」分頁能**線上調整 log level 免重啟**
+
 ![Boot Admin 監控](docs/screenshots/boot-admin.png)
--->
+
+</details>
 
 ---
 
@@ -211,6 +257,19 @@ erDiagram
 
 `ContactRepository` 更刻意示範了**四種查詢寫法對照**：Derived query、`@Query` JPQL、`@NamedQuery`、`@Modifying` UPDATE。
 
+### 📖 每一頁都內嵌「這頁背後的 Spring 原理」
+
+這是 SpringWise 最特別的地方 —— **15 個頁面各自帶一段教學說明**，放在 `templates/text/*Description.html`，以 Thymeleaf fragment 嵌在頁面下方，內容包含該頁用到的 Spring 機制與實際程式碼片段。例如：
+
+| 頁面 | 說明的主題 |
+|---|---|
+| `dashboardDescription` | Spring Security 登入後如何導向 Dashboard 並從 `Authentication` 取回 `Person` |
+| `planPageDescription` | `@ModelAttribute` 為何在每次進入頁面時自動執行 |
+| `signUpCoursesDescription` | 多對多關聯下「已註冊課程」的判斷邏輯 |
+| `viewPlanDetailDescription` | `Set<Person>` 的迴圈渲染與雙向關聯維護 |
+
+也就是說，**這個 app 本身就是它自己的教材** — 操作畫面與原理解說在同一頁。
+
 ### 📊 AOP 全域執行時間記錄（含切點取捨）
 
 `aspect/LoggerAspect` 的兩個 advice **切點範圍刻意不同**：
@@ -221,6 +280,20 @@ erDiagram
 ```
 
 原因是 actuator 走 Basic Auth 且**無 session**，Admin Server 每次輪詢都會重新驗證一次；若 `@Around` 全攔，單次輪詢就會刷出 7 行 log 並把 BCrypt hash 印進檔案。這是個「AOP 切點必須配合實際流量設計」的真實案例。
+
+### 🏷️ 自訂 Actuator `/info` 內容
+
+`config/MyWebActuatorInfoContributor` 實作 `InfoContributor`，Spring Boot 會自動偵測並把資料掛在 `myWeb-info` 這個 key 底下 —— 同時出現在 `/myWeb/actuator/info` 的 JSON 與 **Boot Admin 儀表板的「資訊」卡片**（見上方截圖）。
+
+```java
+@Component
+public class MyWebActuatorInfoContributor implements InfoContributor {
+    @Override
+    public void contribute(Info.Builder builder) {
+        builder.withDetail("myWeb-info", Map.of("App Name", "MyWeb", "App Version", "1.0.0", ...));
+    }
+}
+```
 
 ### 📁 log 落檔 + 線上調整 log level
 
