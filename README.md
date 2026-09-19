@@ -251,8 +251,6 @@ erDiagram
     }
 ```
 
-**怎麼看這張圖** — 線兩端的符號（鴉爪記號）表示「這一端可以有幾筆」，靠近誰就描述誰：
-
 | 符號 | 讀作 |
 |---|---|
 | `\|\|` | 剛好一筆（必填） |
@@ -292,7 +290,7 @@ private Plan plan;                                         // 型別 Plan → �
 @JoinTable(name = "person_courses",                            // 中介表名稱
         joinColumns = @JoinColumn(name = "person_id"),         // 指回「本類別 Person」→ person_courses.person_id
         inverseJoinColumns = @JoinColumn(name = "course_id"))  // 指向「集合元素 Course」→ person_courses.course_id
-private Set<Course> courses = new HashSet<>();             // 型別 Course → 指向 courses 表
+private Set<Course> courses = new HashSet<>();                 // 型別 Course → 指向 courses 表
 ```
 
 三個補充重點：
@@ -428,9 +426,6 @@ http.csrf(csrf -> csrf
 | ④ | `@Modifying` + `@Query` | `org.springframework.data.jpa.repository.*` | **Spring Data JPA**（內容是 JPA 的 JPQL） |
 | ⑤ | `JdbcTemplate` | `org.springframework.jdbc.core.JdbcTemplate` | **Spring JDBC**（與 JPA 無關） |
 
-> 分辨方式就是看 import：`jakarta.persistence.*` = JPA、`org.springframework.data.*` = Spring Data、`org.springframework.jdbc.*` = Spring JDBC。
-> `ContactRepository.java` 的 import 裡**一個 `jakarta.persistence` 都沒有** —— 它用到的註解全是 Spring Data 的。
-
 **① Derived query** ｜ `Spring Data JPA` — 靠方法名自動生成 SQL
 
 ```java
@@ -556,17 +551,6 @@ return contactRepository.findByStatusWithPageableAtQuery(STATUS_OPEN, pageable);
 
 Spring Data 會自動把它翻譯成分頁 SQL，**不用自己寫**。以每頁 5 筆為例：
 
-```sql
--- 第 1 頁 → 取前 5 筆
-... order by contact_id fetch first 5 rows only
-
--- 第 2 頁 → 先跳過 5 筆，再取 5 筆
-... order by contact_id offset 5 rows fetch first 5 rows only
-
--- 第 3 頁 → 先跳過 10 筆，再取 5 筆
-... order by contact_id offset 10 rows fetch first 5 rows only
-```
-
 | 頁 | 跳過 | 取 | 拿到第幾筆 |
 |---|---|---|---|
 | 1 | 0 | 5 | 1–5 |
@@ -671,7 +655,7 @@ cd ConsumingRestService
 | Email | Password | Role | 可存取 |
 |---|---|---|---|
 | `admin@gmail.com` | `admin` | `ROLE_ADMIN` | `/admin/**`、`/api/**`、`/spring-data-api/**`、Actuator |
-| `student@gmail.com` | `123` | `ROLE_STUDENT` | `/student/**` |
+| `student@gmail.com` | `student` | `ROLE_STUDENT` | `/student/**` |
 
 ### 主要入口
 
@@ -679,115 +663,28 @@ cd ConsumingRestService
 |---|---|
 | 前端首頁 | <http://localhost:8081/> |
 | 登入 | <http://localhost:8081/login> |
-| **註冊** | <http://localhost:8081/public/register>（`PublicController` 有 class 層 `@RequestMapping("/public")`）|
+| **註冊** | <http://localhost:8081/public/register> |
 | H2 Console | <http://localhost:8081/h2-console> — JDBC URL `jdbc:h2:mem:mydb`、User `sa`、Password 空白 |
 | HAL Explorer | <http://localhost:8081/spring-data-api/> |
 | Actuator | <http://localhost:8081/myWeb/actuator> |
 | Boot Admin UI | <http://localhost:8083> |
 | REST client 範例 | <http://localhost:8082/getMessages?status=OPEN> |
 
-### 三十秒驗證全鏈路
-
-```bash
-# ① MyWeb 自己的 REST API（需 ROLE_ADMIN）
-curl -u admin@gmail.com:admin "http://localhost:8081/api/contact/getContactMessageByStatus?status=OPEN"
-
-# ② 透過 ConsumingRestService 的 Feign 轉發（8082 → 8081）
-curl "http://localhost:8082/getMessages?status=OPEN"
-
-# ③ 透過 RestTemplate 寫入
-curl -X POST http://localhost:8082/saveMessages -H "Content-Type: application/json" \
-  -d '{"name":"demo","mobile":"1234567890","email":"demo@example.com","subject":"s","message":"m","status":"OPEN"}'
-
-# ④ 透過 WebClient 寫入
-curl -X POST http://localhost:8082/saveMessagesWebClient -H "Content-Type: application/json" \
-  -d '{"name":"demo2","mobile":"1234567890","email":"demo2@example.com","subject":"s","message":"m","status":"OPEN"}'
-
-# ⑤ 健康檢查
-curl -u admin@gmail.com:admin http://localhost:8081/myWeb/actuator/health
-```
-
-> ③ 與 ④ 都會回 **201** — 兩個端點都原樣傳遞上游 `MyWeb` 的狀態碼。
-
-### 建置與打包
-
-```powershell
-.\mvnw.cmd clean package                      # 產物在 target/
-java -jar target\MyWeb-0.0.1-SNAPSHOT.jar     # 執行打包好的 jar
-```
-
 ---
 
 ## 6. 附錄
-
-### 常用指令
-
-在對應模組目錄下執行：
-
-```powershell
-.\mvnw.cmd spring-boot:run                     # 啟動（含 devtools 熱重載）
-.\mvnw.cmd clean package                       # 建置
-.\mvnw.cmd test                                # 全部測試
-.\mvnw.cmd test "-Dtest=SomeTestClass"         # 單一測試類別
-.\mvnw.cmd test "-Dtest=SomeTestClass#someMethod"  # 單一測試方法
-.\mvnw.cmd resources:resources                 # 只更新 static/templates（免重啟）
-```
-
-> **PowerShell 引號**：`-Dtest=...` 必須用雙引號包住，否則 `#` 會被當成註解起點。
 
 ### 設定檔要點（`MyWeb/application.properties`）
 
 | Property | 值 | 說明 |
 |---|---|---|
 | `server.port` | `8081` | HTTP port |
-| `logging.file.name` | `MyWeb/logs/myweb.log` | 相對於**工作目錄 = repo 根**；`pom.xml` 的 `spring-boot-maven-plugin` 設了 `<workingDirectory>${project.basedir}/..</workingDirectory>` 讓 IDE 與 Maven 兩種啟動方式一致 |
-| `spring.datasource.url` | `jdbc:h2:mem:mydb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE` | `DB_CLOSE_DELAY=-1` 讓 devtools restart / HikariCP 回收連線時 DB 不被銷毀 |
+| `logging.file.name` | `MyWeb/logs/myweb.log` | log 檔位置（相對於 repo 根） |
+| `spring.datasource.url` | `jdbc:h2:mem:mydb` | H2 記憶體資料庫 |
 | `spring.jpa.hibernate.ddl-auto` | `validate` | 只驗證、不動 DB |
-| `spring.jpa.properties.jakarta.persistence.validation.mode` | `none` | 關閉持久層 Bean Validation（避免對已加密的密碼重複驗證）。**用 `jakarta.*`，舊的 `javax.*` 已棄用** |
+| `spring.jpa.properties.jakarta.persistence.validation.mode` | `none` | 註冊時密碼會先加密再存檔，此時 `password` 已與 `confirmPassword` 不同。Hibernate 預設在存檔前會**再驗一次**欄位，會把這個誤判成「兩次密碼不一致」而讓註冊失敗 —— 所以關掉（表單送出時 MVC 層已經驗過了）。屬性前綴用 `jakarta.*`，`javax.*` 是舊名已棄用 |
 | `spring.data.rest.basePath` | `/spring-data-api` | Spring Data REST 前綴 |
 | `management.endpoints.web.base-path` | `/myWeb/actuator` | Actuator base path |
 | `management.endpoints.web.exposure.include` | `*` | 開放全部端點（**生產環境請改白名單**） |
 | `spring.boot.admin.client.enabled` | `true` | 向 8083 註冊 |
 | `myweb.paginationPageSize` | `5` | 後台分頁筆數（`@Validated` 限制 5–10） |
-
-新增可調參數請集中在 `config/MyWebProperties`（前綴 `myweb.*`），不要用 `@Value` 散落各處。
-
-### 測試現況
-
-- **框架**：JUnit 5 + Spring Boot Test + Spring Security Test
-- **命名慣例**：測試類 `*Tests`；測試方法以行為描述，例：`registerRejectsDuplicateEmail()`
-- **現況**：`src/test/java` 除了空的 `*ApplicationTests` 外尚無內容 — 這是待補的區塊
-
-### Boot 4 / Java 25 升級筆記
-
-升級過程中踩到、非 obvious 的點：
-
-- **`spring-boot-starter-web` 已 deprecated** → 三個模組都改用 `spring-boot-starter-webmvc`
-- **Boot 4 拆分了 autoconfigure 模組**，常用類別搬家：
-  | 類別 | 舊路徑 | 新路徑 |
-  |---|---|---|
-  | `@EntityScan` | `…autoconfigure.domain` | `org.springframework.boot.persistence.autoconfigure` |
-  | `PathRequest`（servlet） | `…autoconfigure.security.servlet` | `org.springframework.boot.security.autoconfigure.web.servlet` |
-  | `RestTemplateBuilder` | `…boot.web.client` | `org.springframework.boot.restclient` |
-  | H2 Console | 內含於 autoconfigure | 獨立模組 `spring-boot-h2console` |
-- **Hibernate groupId 變更**：`hibernate-micrometer` 的 groupId 是 `org.hibernate.orm`；版本交給 Boot BOM，勿硬編碼
-- **Java 23+ 停用預設的 classpath 隱式 annotation processing** → `maven-compiler-plugin` 必須顯式宣告 Lombok 的 `<annotationProcessorPaths>`，否則 `@Slf4j`、`@Data` 不生效
-
-### Troubleshooting
-
-| 症狀 | 原因與解法 |
-|---|---|
-| 啟動時 `Schema-validation: missing table/column` | `ddl-auto=validate` 抓到 `sql/schema.sql` 與 Entity 不一致 — 同步兩邊 |
-| 呼叫 `/api/**` 回 **401** | 沒帶 Basic Auth 或權限不足（需 `ROLE_ADMIN`） |
-| `/public/register` 以外的註冊網址回 **404** | 註冊頁在 `/public/register`，表單 POST 到 `/public/createUser` |
-| `ConnectException: Connection refused`（8082 的任一端點） | 三個 client 的目標都寫死 `http://localhost:8081` — 先啟動 `MyWeb` |
-| console 一直刷 `authenticate` 與 SQL | Admin Server 正在輪詢；已透過收斂 `LoggerAspect` 切點與移除 `show-sql` 解決 — 若復發，檢查這兩處 |
-| Boot Admin UI 看不到 `MyWeb` | 確認 `spring.boot.admin.client.enabled=true` 且 `AdminActuator` 已在 8083 啟動 |
-| `@Slf4j` / `@Data` 未生效 | `maven-compiler-plugin` 缺少 Lombok annotation processor 宣告 |
-| `/h2-console` 回 404 | 確認 `pom.xml` 有 `spring-boot-h2console` 依賴且 `spring.h2.console.enabled=true` |
-| log 檔跑到 repo 根而不是 `MyWeb/logs/` | 啟動時的工作目錄不是 repo 根 — 見上方「設定檔要點」 |
-| Windows PowerShell 中文亂碼 | 啟動前執行 `chcp 65001`，或改用 Windows Terminal |
-
-### 授權
-
-本專案為個人學習用途，未附加授權條款。

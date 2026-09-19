@@ -53,9 +53,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `@EnableConfigurationProperties(MyWebProperties.class)` — 顯式登記 `myweb.*` 屬性 bean，取代在 `MyWebProperties` 上加 `@Component`
 
 ### 資料層
-- 使用內嵌 **H2** 記憶體資料庫（`jdbc:h2:mem:mydb`，附 `DB_CLOSE_DELAY=-1` 讓 devtools restart / HikariCP 回收連線時 DB 不會被銷毀），Console 位於 `http://localhost:8081/h2-console`
+- 使用內嵌 **H2** 記憶體資料庫（`jdbc:h2:mem:mydb`），Console 位於 `http://localhost:8081/h2-console`。⚠️ **devtools 熱重載會讓資料歸零** —— 關閉舊 ApplicationContext 時 Spring 的 `inMemoryDatabaseShutdownExecutor` 會關掉內嵌 DB，重啟後 `schema.sql` + `data.sql` 重跑，AUTO_INCREMENT 也重置。開發時請預期「改 Java 程式碼 → 手動建立的測試資料消失」。註：連線字串原本帶 `DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE`，實測在目前配置下無可觀察效果（HikariCP 預設 `minimumIdle = maximumPoolSize = 10`，連線數不會歸零）故已移除；日後補整合測試或把 `minimum-idle` 調成 0 時可能需要加回 `DB_CLOSE_DELAY=-1`
 - **`schema.sql` 是 schema 的唯一真相** — `spring.jpa.hibernate.ddl-auto=validate`，Hibernate 只在啟動時對照 `src/main/resources/sql/schema.sql` **驗證** JPA Entity（型別、欄位缺失就啟動失敗），**不會** 依 Entity 修改 DB。新增/變更欄位時：改 `schema.sql` DDL **並** 同步 `model/` 底下 Entity 標註，兩邊不一致啟動就會炸
-- 初始資料（含兩個 BCrypt 加密的預設帳號：`admin@gmail.com` / `admin` 與 `student@gmail.com` / `123`）放在 `src/main/resources/sql/data.sql`；路徑透過 `spring.sql.init.{schema,data}-locations` 明確指定
+- 初始資料（含兩個 BCrypt 加密的預設帳號：`admin@gmail.com` / `admin` 與 `student@gmail.com` / `student`）放在 `src/main/resources/sql/data.sql`；路徑透過 `spring.sql.init.{schema,data}-locations` 明確指定
 - JPA Entity：`Person`、`Role`、`Address`、`Plan`、`Course`、`Contact`。`Person` 擁有到 `Role`、`Address`、`Plan` 的外鍵，並透過 `person_courses` 中介表對 `Course` 做多對多 — 全部為 `FetchType.EAGER`
 - 稽核欄位來自 `model/BaseEntity`；`Person` **刻意覆蓋** `createdBy` 欄位，以避免未登入註冊時 insert 失敗
 - `model/` 底下有 **兩個非 JPA 類別**，勿誤加 `@Entity`：
