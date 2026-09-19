@@ -346,6 +346,41 @@ private Set<Course> courses = new HashSet<>();             // 型別 Course → 
 @AfterThrowing("anyMyWebMethod()") // com.company.myweb..* — 例外全範圍記錄
 ```
 
+#### 實際攔到哪些類別
+
+`@Around` 的 `businessLayer()` 涵蓋三個 package，也就是**所有進入點與業務邏輯**：
+
+| package | 類別 | 攔截後得到什麼 |
+|---|---|---|
+| `controller/` | `HomeController`、`NewsController`、`ContactController`、`LoginController`、`PublicController` | 每個網頁請求的處理耗時 |
+| `controller/authenticated/` | `DashboardController`、`ProfilePageController`、`AdminController`、`StudentController` | 登入後各功能的耗時 |
+| `rest/` | `ContactRestController` | REST API 的耗時（`GlobalExceptionRestController` 已排除） |
+| `service/` | `PersonService`、`ContactService` | 註冊、聯絡訊息等寫入邏輯的耗時 |
+
+**沒有攔**的：`repository/`（Spring Data 產生的 proxy）、`config/security/`（認證流程）、`model/`、`auditor/`。
+
+實際輸出長這樣（造訪 `/home` 與 `/news`）：
+
+```
+[HomeController] HomeController.homePage() 開始執行，參數 []
+[HomeController] HomeController.homePage() 執行結束，耗時 0 ms，回傳 nav/home
+[NewsController] NewsController.newsPage(..) 開始執行，參數 [{}]
+[NewsController] NewsController.newsPage(..) 執行結束，耗時 4 ms，回傳 nav/news
+```
+
+#### AOP 在這個專案的三個應用面
+
+| 用途 | 誰在做 | 說明 |
+|---|---|---|
+| **效能記錄**（自己寫的） | `LoggerAspect` `@Around` | 每個業務方法的參數、耗時、回傳值 |
+| **例外記錄**（自己寫的） | `LoggerAspect` `@AfterThrowing` | 全範圍攔截，含 stack trace |
+| **交易管理**（Spring 內建） | `ContactRepository` 的 `@Transactional` | `@Modifying` 的 UPDATE 必須在交易內，否則拋 `TransactionRequiredException` |
+| **屬性驗證**（Spring 內建） | `MyWebProperties` 的 `@Validated` | `myweb.paginationPageSize` 超出 5–10 範圍時**啟動就失敗** |
+
+後兩者是 Spring 用同一套 AOP 機制實作的 —— **你沒寫 aspect，但它們也是 proxy**。這也是為什麼 `@Transactional` 標在 private 方法或 self-invocation 上會失效：**都繞過了 proxy**。
+
+> 💡 這個專案**沒有** `spring-boot-starter-aop` 依賴 —— `aspectjweaver` 是經由 `spring-boot-starter-data-jpa` → `spring-aspects` 傳遞進來的。若移除 JPA 依賴，`LoggerAspect` 會無聲失效。
+
 ### ✅ 自訂 Bean Validation
 
 `myValidation/` 下有兩個自製 annotation：
