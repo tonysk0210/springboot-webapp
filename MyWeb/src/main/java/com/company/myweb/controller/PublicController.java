@@ -38,7 +38,7 @@ public class PublicController {
         } catch (EmailAlreadyExistsException ex) {
             // 3) 把 exception 訊息綁定到 "email" 欄位的錯誤上
             result.rejectValue(
-                    "email",            // Person 上要標記錯誤的欄位名
+                    "email",           // Person 上要標記錯誤的欄位名
                     null,                    // message code（若要 i18n 可在 messages.properties 定義）
                     ex.getMessage()          // fallback 訊息（從 exception 取）
             );

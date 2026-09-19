@@ -21,11 +21,11 @@ import static com.company.myweb.constant.ProjectConstant.ANSI_GREEN;
 
 /**
  * 使用者提交 POST /login 後的完整流程：
- *   1. Spring Security 透過 AuthenticationProvider 驗證使用者
- *   2. 產生 UsernamePasswordAuthenticationToken（含 username + roles/authorities）
- *   3. 存進 SecurityContext 與 session
- *   4. 導向設定的 success URL（見 SpringSecurityConfig.formLogin）
- *   5. 之後每個 request 都用這個 context 決定授權
+ * 1. Spring Security 透過 AuthenticationProvider 驗證使用者
+ * 2. 產生 UsernamePasswordAuthenticationToken（含 username + roles/authorities）
+ * 3. 存進 SecurityContext 與 session
+ * 4. 導向設定的 success URL（見 SpringSecurityConfig.formLogin）
+ * 5. 之後每個 request 都用這個 context 決定授權
  */
 @Slf4j
 @Component
@@ -42,11 +42,11 @@ public class UsernamePwdAuthenticationProvider implements AuthenticationProvider
 
     /**
      * Spring Security 可能同時註冊多個 AuthenticationProvider。表單登入流程：
-     *   1. AuthenticationManager 嘗試驗證
-     *   2. 依序呼叫每個 provider 的 supports()
-     *   3. 傳入 authentication request 的 class（例如 UsernamePasswordAuthenticationToken.class）
-     *   4. supports() 回 true → 呼叫該 provider 的 authenticate()
-     *   5. supports() 用於「挑對的 provider」處理當下的 authentication 型別
+     * 1. AuthenticationManager 嘗試驗證
+     * 2. 依序呼叫每個 provider 的 supports()
+     * 3. 傳入 authentication request 的 class（例如 UsernamePasswordAuthenticationToken.class）
+     * 4. supports() 回 true → 呼叫該 provider 的 authenticate()
+     * 5. supports() 用於「挑對的 provider」處理當下的 authentication 型別
      */
     @Override
     public boolean supports(Class<?> authentication) {
@@ -60,7 +60,8 @@ public class UsernamePwdAuthenticationProvider implements AuthenticationProvider
      */
     @Override
     public Authentication authenticate(Authentication authentication) {
-        // 1) 從表單取出使用者輸入的 email 與密碼
+        // 1) UsernamePasswordAuthenticationFilter 已將 login.html 的 name="username" / name="password" 放入未認證的 Authentication。
+        // getName() 取得 username（本專案實際是 Email），credentials 取得原始密碼。
         String enteredEmail = authentication.getName();
         String enteredPassword = authentication.getCredentials().toString();
         // 2) 依 email 查 Person（Person.roles 是 EAGER，一併載入）
@@ -69,7 +70,9 @@ public class UsernamePwdAuthenticationProvider implements AuthenticationProvider
 
         // 3) 認證邏輯：使用者存在 + BCrypt 比對輸入密碼與 DB 內加密密碼相符
         if (person != null && passwordEncoder.matches(enteredPassword, person.getPassword()))
-            // 4) 建立已認證的 Authentication（principal + authorities，credentials 清 null）
+            // 4) 建立已認證的 Authentication（principal + authorities，credentials 清 null）。
+            // 回傳後由 UsernamePasswordAuthenticationFilter 接手，將新的 Authentication 放入 SecurityContext，並保存到 HTTP Session，讓後續 request 可以取得目前登入者。
+            // credentials 設為 null，避免登入成功後繼續保留原始密碼。
             return new UsernamePasswordAuthenticationToken(
                     enteredEmail,
                     null,

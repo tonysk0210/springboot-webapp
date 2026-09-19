@@ -21,7 +21,7 @@ public class LoginController {
         // 1) 建立 Spring 內建的登出處理器
         SecurityContextLogoutHandler logoutHandler = new SecurityContextLogoutHandler();
 
-        // 2) 執行登出：清除 SecurityContext、invalidate HttpSession、刪除 JSESSIONID cookie
+        // 2) 清除登入狀態並使目前的 HttpSession 失效。此處不會明確刪除瀏覽器中的 JSESSIONID Cookie。
         logoutHandler.logout(request, response, authentication);
         return "redirect:/login?logout=true";
     }

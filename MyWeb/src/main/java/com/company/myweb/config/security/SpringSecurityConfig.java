@@ -48,20 +48,24 @@ public class SpringSecurityConfig {
                 .requestMatchers("/myWeb/actuator/**").hasRole("ADMIN")
                 .anyRequest().permitAll());
 
-        // 表單登入：GET /login 顯示登入頁；成功 → /dashboard；失敗 → /login?error=true
+        // 啟用 Spring Security 表單登入功能；formLogin() 會自動加入 UsernamePasswordAuthenticationFilter，使用預設 POST /login 接收登入表單。
+        // 預設欄位名稱是 username、password；本專案的 username 實際填入使用者 Email。
+        // 登入驗證成功後，Spring Security 會把 Authentication 放入 SecurityContext，
+        // 並保存到 HTTP Session，讓後續 request 能辨識目前登入者。
+        // GET /login 顯示登入頁；成功 → /dashboard；失敗 → /login?error=true
         http.formLogin(loginConfig -> loginConfig
                 .loginPage("/login")
                 .defaultSuccessUrl("/dashboard")
                 .failureUrl("/login?error=true"));
+
+        // 註冊自訂 provider（用 email 查 person 表 + BCrypt 比對密碼）
+        http.authenticationProvider(myCustomProvider);
 
         // 登出流程改在 LoginController 內手動處理（走 GET 繞過預設 CSRF）
         // http.logout(...) 因此不在此設定
 
         // 同時啟用 HTTP Basic Auth：給 Boot Admin server poll actuator、REST API 呼叫使用
         http.httpBasic(Customizer.withDefaults());
-
-        // 註冊自訂 provider（用 email 查 person 表 + BCrypt 比對密碼）
-        http.authenticationProvider(myCustomProvider);
 
         // 關掉 X-Frame-Options → 允許 H2 console 用 <iframe> 顯示子視窗
         // 生產環境不該關（會有 clickjacking 風險），這裡純為 dev 便利
@@ -71,7 +75,9 @@ public class SpringSecurityConfig {
         return http.build();
     }
 
-    /** BCrypt 密碼編碼器：註冊 + 登入時比對密碼都用這個 bean */
+    /**
+     * BCrypt 密碼編碼器：註冊 + 登入時比對密碼都用這個 bean
+     */
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();

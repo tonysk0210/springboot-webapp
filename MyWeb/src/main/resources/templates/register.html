@@ -15,8 +15,8 @@
 
     <!-- 顯示 Bean Validation 錯誤訊息清單 -->
     <ul class="alert-list">
-        <li th:each="error : ${#fields.errors('person.*')}"
-            th:classappend="${error.contains('already exists') ? 'email-error' : 'alert'}"
+        <li class="alert"
+            th:each="error : ${#fields.errors('person.*')}"
             th:text="${error}">
         </li>
     </ul>

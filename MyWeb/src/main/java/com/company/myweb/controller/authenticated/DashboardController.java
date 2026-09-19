@@ -32,7 +32,7 @@ public class DashboardController {
         if (person.getPlan() != null) model.addAttribute("plan", person.getPlan().getName());
         // 注意：若 Person.plan 是 LAZY，transaction 結束後存取會拋 LazyInitializationException
 
-        // 3) 把 Person 存進 session，供 ProfilePageController 等後續 handler 使用
+        // 3) 把 Person 存進內嵌 Tomcat 管理的伺服器端 HttpSession，供 ProfilePageController 等後續 handler 使用
         session.setAttribute("loggedInPerson", person);
 
         return "authenticated/dashboard";

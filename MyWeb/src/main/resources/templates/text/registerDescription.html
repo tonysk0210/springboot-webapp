@@ -35,7 +35,8 @@
     <!--code-->
     <pre><code><span>&lt;!-- 渲染驗證失敗信息顯示 --&gt;</span>
 &lt;ul&gt;
-    &lt;li th:each=&quot;error : ${#fields.errors('person.*')}&quot;
+    &lt;li class=&quot;alert&quot;
+        th:each=&quot;error : ${#fields.errors('person.*')}&quot;
         th:text=&quot;${error}&quot;&gt;
     &lt;/li&gt;
 &lt;/ul&gt;
