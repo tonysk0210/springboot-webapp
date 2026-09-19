@@ -431,7 +431,22 @@ int updateStatusById(String status, String updatedBy, int id);
 - **`@Modifying`** —— 告訴 Spring Data 改用 `executeUpdate()` 而非 `getResultList()` 執行，回傳值因此是**受影響的列數**（`ContactService` 用 `> 0` 判斷成功）
 - **`@Transactional`** —— UPDATE / DELETE 必須在交易內，否則拋 `TransactionRequiredException`
 
-⚠️ **這種 bulk update 會繞過 JPA lifecycle，`AuditorAware` 不會自動填 `updatedBy`** —— 所以 SQL 裡得手動寫進去（`ContactService.updateContactStatus` 把 `authentication.getName()` 傳進來）。
+⚠️ **稽核欄位要手動填。** 平常 `repository.save(entity)` 會先把 Entity 載入記憶體，Hibernate 才有物件可攔截，`AuditingEntityListener` 就在這時自動補上 `updatedBy` / `updatedAt`。但 bulk update **全程不載入任何 Entity**，直接把 UPDATE 丟給資料庫 —— 沒有物件就沒有攔截點，稽核機制完全不會被觸發。
+
+所以：
+
+| | `repository.save(entity)` | `@Modifying` bulk update |
+|---|---|---|
+| 載入 Entity | ✅ | ❌ |
+| 稽核欄位自動填 | ✅ | ❌ **要自己寫進 SQL** |
+| 一次改多列 | 要 loop | 一句 SQL，快 |
+
+這就是為什麼上面的 JPQL 裡明寫了 `c.updatedAt = CURRENT_TIMESTAMP, c.updatedBy = ?2`，而 `ContactService` 得手動把登入者挖出來傳進去：
+
+```java
+contactRepository.updateStatusById(STATUS_CLOSED, authentication.getName(), id);
+//                                                 ↑ AuditorAware 平常會自己拿，這裡只能手動給
+```
 
 **⑤ `JdbcTemplate` — 完全不走 JPA**
 
