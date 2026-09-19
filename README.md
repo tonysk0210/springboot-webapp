@@ -417,7 +417,7 @@ Page<Contact> findByStatusWithPageableNamed(String status, Pageable pageable);
 
 ⚠️ 啟動時就編譯驗證語法，但**查詢字串不可改寫**，所以搭 `Pageable` 時**排序不會生效**（分頁仍有效），Spring 會印 WARN 提醒。本專案保留它純粹作為對照。
 
-**④ `@Modifying` + `@Query` — 寫入型查詢**
+**④ `@Modifying` + `@Query` — 批次 UPDATE / DELETE**
 
 ```java
 @Transactional
@@ -426,7 +426,10 @@ Page<Contact> findByStatusWithPageableNamed(String status, Pageable pageable);
 int updateStatusById(String status, String updatedBy, int id);
 ```
 
-用於後台「關閉訊息」。兩個必要註解：`@Modifying` 宣告這不是 SELECT、`@Transactional` 因為 UPDATE 必須在交易內。
+用於後台「關閉訊息」。兩個註解缺一不可：
+
+- **`@Modifying`** —— 告訴 Spring Data 改用 `executeUpdate()` 而非 `getResultList()` 執行，回傳值因此是**受影響的列數**（`ContactService` 用 `> 0` 判斷成功）
+- **`@Transactional`** —— UPDATE / DELETE 必須在交易內，否則拋 `TransactionRequiredException`
 
 ⚠️ **這種 bulk update 會繞過 JPA lifecycle，`AuditorAware` 不會自動填 `updatedBy`** —— 所以 SQL 裡得手動寫進去（`ContactService.updateContactStatus` 把 `authentication.getName()` 傳進來）。
 
