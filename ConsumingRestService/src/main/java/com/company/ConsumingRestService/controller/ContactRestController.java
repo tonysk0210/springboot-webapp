@@ -52,7 +52,7 @@ public class ContactRestController {
      */
     // 透過 RestTemplate 呼叫
     @PostMapping("/saveMessages")
-    public ResponseEntity saveMessages(@RequestBody Contact contact) {
+    public ResponseEntity<Response> saveMessages(@RequestBody Contact contact) {
         String uri = "http://localhost:8081/api/contact/saveContactMessage";
         // 1) 建立 HttpHeaders，並加入必要的 invocationFrom
         HttpHeaders headers = new HttpHeaders();
@@ -78,12 +78,15 @@ public class ContactRestController {
      */
     // 透過 WebClient 呼叫
     @PostMapping("/saveMessagesWebClient")
-    public Mono<Response> saveMessagesWebClient(@RequestBody Contact contact) {
+    public Mono<ResponseEntity<Response>> saveMessagesWebClient(@RequestBody Contact contact) {
         String uri = "http://localhost:8081/api/contact/saveContactMessage";
         return webClient.post().uri(uri)
                 .header("invocationFrom", "WebClient") // 1) 加入自訂標頭
                 .body(Mono.just(contact), Contact.class) // 2) 設定請求內容
                 .retrieve()
-                .bodyToMono(Response.class); // 3) 將回應轉為 Mono<Response>
+                // 3) 用 toEntity 而非 bodyToMono：連同上游的 status code 與 header 一起取回。
+                //    bodyToMono 只拿 body，狀態碼會被丟掉 → 這一層會退回 Spring 預設的 200，
+                //    與 /saveMessages（RestTemplate 版回傳 ResponseEntity）行為不一致。
+                .toEntity(Response.class);
     }
 }
