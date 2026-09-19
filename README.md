@@ -299,7 +299,7 @@ private Set<Course> courses = new HashSet<>();             // 型別 Course → 
 
 1. **外鍵全部集中在 `person` 表上** —— `role_id`、`address_id`、`plan_id` 三個欄位都在 `person`，所以 `PERSON` 是這張圖唯一的「中心」，其他表彼此不相連。
 2. **`person_courses` 是純中介表** —— 只有 `person_id` + `course_id` 兩欄，並以兩者為**複合主鍵**，因此同一個學生無法重複報名同一門課（資料庫層級就擋掉）。
-3. **owning side 與 inverse side** —— `Person.plan`、`Person.courses` 是 **owning side**（負責寫入 FK 與中介表）；`Plan.persons`、`Course.persons` 標了 `mappedBy`，是**唯讀視角**，直接改動它們不會寫進資料庫。
+3. **`Person` 的四個關聯全都是 owning side** —— 判準是「誰身上有 `@JoinColumn` / `@JoinTable`」，也就是誰管著外鍵；因為外鍵都在 `person` 表，所以四個都歸 `Person`。其中兩個是**單向**（`Role`、`Address` 沒有指回 `Person` 的欄位，根本沒有 inverse side），另外兩個是**雙向** —— `Plan.persons`、`Course.persons` 標了 `mappedBy`，是**唯讀視角**，直接改動它們不會寫進資料庫（見 `AdminController.addStudent`：必須 `person.setPlan(...)` 再存 `Person` 才有效）。
 
 | 類別 | 類型 | 注意事項 |
 |---|---|---|
