@@ -375,6 +375,63 @@ private Set<Course> courses = new HashSet<>();             // 型別 Course → 
 | **效能記錄** | `LoggerAspect` `@Around` | 每個業務方法的參數、耗時、回傳值 |
 | **例外記錄** | `LoggerAspect` `@AfterThrowing` | 全範圍攔截，含 stack trace |
 
+### 📄 分頁 + 動態排序（Spring Data `Pageable`）
+
+後台聯絡訊息列表（`/admin/viewContactMessage/page/{n}`）示範了 **Spring Data 分頁的完整一條龍**：每頁筆數由設定檔控制、欄位可點擊排序、翻頁與排序狀態互相保留。
+
+**① 每頁筆數外部化，而且會被驗證**
+
+```java
+// config/MyWebProperties — @ConfigurationProperties + @Validated
+@Min(value = 5, message = "數值必須介於 5 到 10 之間")
+@Max(value = 10, message = "數值必須介於 5 到 10 之間")
+private int paginationPageSize;
+```
+
+```properties
+myweb.paginationPageSize=5
+```
+
+改成 `3` 或 `20` → **應用程式啟動就失敗**，不會等到使用者翻頁才出錯。
+
+**② Service 組出 `Pageable`**
+
+```java
+// service/ContactService
+Pageable pageable = PageRequest.of(
+        currentPageNum - 1,                                                // 頁碼由 0 開始，扣掉使用者看到的 1
+        myWebProperties.getPaginationPageSize(),                           // 每頁筆數（來自設定檔）
+        sortDir.equals("asc") ? Sort.Direction.ASC : Sort.Direction.DESC,  // 排序方向
+        sortField                                                          // 排序欄位
+);
+return contactRepository.findByStatusWithPageableAtQuery(STATUS_OPEN, pageable);
+```
+
+Spring Data 會自動把它翻譯成 `LIMIT` / `OFFSET` 與 `ORDER BY`，**不用自己寫分頁 SQL**。
+
+**③ Controller 把分頁狀態交給模板**
+
+```java
+@GetMapping("/viewContactMessage/page/{currentPageNum}")
+public String viewContactMessage(Model model,
+                                 @PathVariable int currentPageNum,     // 頁碼走 path
+                                 @RequestParam String sortField,       // 排序條件走 query param
+                                 @RequestParam String sortDir) { ... }
+```
+
+送給模板的除了資料，還有 `totalPage`、`currentPageNum`、`sortField`、`sortDir`，以及 **`reversedSortDir`** —— 讓同一個欄位標頭再點一次就反轉方向。
+
+**④ 模板把狀態帶回連結**
+
+```html
+<a th:href="@{'/admin/viewContactMessage/page/' + ${currentPageNum} + '?sortField=name&sortDir=' + ${reversedSortDir}}">姓名
+   <span th:text="${sortField == 'name' ? (sortDir == 'asc' ? '↑' : '↓') : '↑↓'}"></span></a>
+```
+
+每個欄位標頭都是一個連結，**帶著當前頁碼**過去 —— 所以排序後不會跳回第一頁；目前排序中的欄位顯示 `↑` / `↓`，其餘顯示 `↑↓`。
+
+> ⚠️ `ContactRepository` 裡另外兩個同功能的方法是**教學對照用**：`readByStatus`（Derived query）與 `findByStatusWithPageableNamed`（`@NamedQuery`）。**實際使用的是 `findByStatusWithPageableAtQuery`（`@Query`）** —— 因為 `@NamedQuery` 搭配 `Pageable` 時**排序不會生效**（啟動時 Spring 會印 WARN 提醒）。
+
 ### ✅ 自訂 Bean Validation
 
 `myValidation/` 下有兩個自製 annotation：
