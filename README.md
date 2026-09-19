@@ -158,22 +158,39 @@ flowchart TD
 ### 模組間的通訊契約
 
 ```
-┌──────────────────────────┐                              ┌─────────────────────────────┐
-│ ConsumingRestService     │   ① Feign  GET  /getContact… │ MyWeb                       │
-│ :8082                    │ ─────────────────────────────▶ :8081                       │
-│                          │   ② RestTemplate POST /save… │                             │
-│  三個 HTTP client        │ ─────────────────────────────▶  /api/contact/**            │
-│  預先帶 Basic Auth       │   ③ WebClient    POST /save… │  （需 ROLE_ADMIN）          │
-│  admin@gmail.com/admin   │ ─────────────────────────────▶                             │
-└──────────────────────────┘                              │  Thymeleaf UI               │
-                                                          │  Spring Data REST           │
-┌──────────────────────────┐   ④ 啟動時 POST 註冊自己     │  H2 (in-memory)             │
-│ AdminActuator            │ ◀─────────────────────────────  Spring Security            │
-│ :8083                    │                              │                             │
-│  Boot Admin Server UI    │   ⑤ 定期輪詢（Basic Auth）   │  /myWeb/actuator/**         │
-│                          │ ─────────────────────────────▶                             │
-└──────────────────────────┘                              └─────────────────────────────┘
+┌────────────────────────────┐                              ┌──────────────────────────────┐
+│ ConsumingRestService :8082 │                              │ MyWeb                  :8081 │
+├────────────────────────────┤                              ├──────────────────────────────┤
+│ [1] Feign         GET      │─ getContactMessageByStatus ─>│ /api/contact/**              │
+│ [2] RestTemplate  POST     │───── saveContactMessage ────>│   requires ROLE_ADMIN        │
+│ [3] WebClient     POST     │───── saveContactMessage ────>│                              │
+│                            │                              │ Thymeleaf UI                 │
+│ Basic Auth preset:         │                              │ Spring Data REST             │
+│ admin@gmail.com / admin    │                              │ Spring Security              │
+└────────────────────────────┘                              │ H2 (in-memory)               │
+                                                            │                              │
+┌────────────────────────────┐                              │ /myWeb/actuator/**           │
+│ AdminActuator     :8083    │<─── [4] register on boot ────│   requires ROLE_ADMIN        │
+├────────────────────────────┤                              │                              │
+│ Boot Admin Server UI       │─── [5] poll (Basic Auth) ───>│                              │
+└────────────────────────────┘                              └──────────────────────────────┘
 ```
+
+| # | 呼叫 | 說明 |
+|---|---|---|
+| **[1]** | Feign → `GET /api/contact/getContactMessageByStatus` | 宣告式 client，`ContactProxy` 介面無實作，由 Spring 執行期動態代理 |
+| **[2]** | RestTemplate → `POST /api/contact/saveContactMessage` | 回傳整個 `ResponseEntity`，**上游 201 原樣傳遞** |
+| **[3]** | WebClient → `POST /api/contact/saveContactMessage` | 只回 `Mono<Response>`（body），外層狀態碼走 Spring 預設 **200** |
+| **[4]** | MyWeb **主動**向 8083 註冊 | 啟動時送出 service / management base-url |
+| **[5]** | AdminActuator 反向定期輪詢 | Basic Auth 且 **無 session** — 每次輪詢都重新驗證一次 |
+
+各模組的職責與依賴方向：
+
+| 模組 | 對外提供 | 依賴誰 |
+|---|---|---|
+| **MyWeb** `:8081` | Thymeleaf UI、`/api/contact/**`、Spring Data REST、Actuator、H2、Spring Security | 無（可獨立啟動） |
+| **ConsumingRestService** `:8082` | `/getMessages`、`/saveMessages`、`/saveMessagesWebClient` | **MyWeb**（Feign 網址寫死 8081） |
+| **AdminActuator** `:8083` | Boot Admin Server Web UI | 被 MyWeb 註冊，再反向持續輪詢 MyWeb |
 
 **啟動相依性**：`MyWeb` 可獨立跑；`ConsumingRestService` 的 Feign 目標網址**寫死**指向 8081；`MyWeb` 預設會向 8083 註冊（`spring.boot.admin.client.enabled=true`），所以 **`AdminActuator` 建議先啟動**，否則 console 會一直刷連線失敗。
 
