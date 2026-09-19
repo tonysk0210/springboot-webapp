@@ -341,8 +341,6 @@ private Set<Course> courses = new HashSet<>();             // 型別 Course → 
 | **表單登入** | 瀏覽器使用者 | `http.formLogin(...)` — 登入頁 `/login`、成功導 `/dashboard`、失敗導 `/login?error=true` |
 | **HTTP Basic** | AdminActuator 輪詢、REST client 呼叫 | `http.httpBasic(...)` — 無 session，每個請求都重新驗證 |
 
-登出**刻意寫成 `LoginController` 的 GET handler**（繞過預設對 `POST /logout` 的 CSRF 檢查），內部手動呼叫 `SecurityContextLogoutHandler`。
-
 #### ④ CSRF — 預設全開，四個路徑豁免
 
 ```java
@@ -365,13 +363,9 @@ http.csrf(csrf -> csrf
 <a sec:authorize="isAnonymous()" th:href="@{/login}">登入</a>   <!-- navbar.html -->
 ```
 
-後端擋路徑、前端藏入口 —— **兩層都要做**，只藏 UI 不擋路徑等於沒防護。
-
 #### ⑥ 稽核串接
 
 `AuditAwareImpl` 從 `SecurityContextHolder` 取出登入者 email，餵給 `@CreatedBy` / `@LastModifiedBy`；未登入時退回 `"anonymousUser"`（**未登入註冊**時要靠這個才寫得進 `person.created_by`）。
-
-> ⚠️ 幾個 **dev 專用、正式環境要改**的設定：`frameOptions().disable()`（為了讓 H2 console 用 iframe，有 clickjacking 風險）、actuator `exposure.include=*`、以及 8082 的三個 client 把 admin 帳密寫死在原始碼。
 
 ### 🧩 同一份資料，四種存取風格並陳
 
@@ -401,7 +395,7 @@ http.csrf(csrf -> csrf
 |---|---|---|
 | `controller/` | `HomeController`、`NewsController`、`ContactController`、`LoginController`、`PublicController` | 每個網頁請求的處理耗時 |
 | `controller/authenticated/` | `DashboardController`、`ProfilePageController`、`AdminController`、`StudentController` | 登入後各功能的耗時 |
-| `rest/` | `ContactRestController` | REST API 的耗時（`GlobalExceptionRestController` 已排除） |
+| `rest/` | `ContactRestController` | REST API 的耗時 |
 | `service/` | `PersonService`、`ContactService` | 註冊、聯絡訊息等寫入邏輯的耗時 |
 
 **沒有攔**的：`repository/`（Spring Data 產生的 proxy）、`config/security/`（認證流程）、`model/`、`auditor/`。
@@ -422,17 +416,28 @@ http.csrf(csrf -> csrf
 | **效能記錄** | `LoggerAspect` `@Around` | 每個業務方法的參數、耗時、回傳值 |
 | **例外記錄** | `LoggerAspect` `@AfterThrowing` | 全範圍攔截，含 stack trace |
 
-### 🔍 JPA 查詢寫法對照（同一件事，五種寫法）
+### 🔍 資料存取寫法對照（同一件事，五種寫法）
 
-`repository/` 刻意用**同一份資料**示範各種查詢方式，方便直接比較優缺點。
+`repository/` 刻意用**同一份資料**示範各種查詢方式，方便直接比較優缺點。五種寫法分屬**三個不同的框架層**：
 
-**① Derived query — 靠方法名自動生成 SQL**
+| # | 寫法 | 註解 / API 出自 | 屬於 |
+|---|---|---|---|
+| ① | Derived query | 無註解，靠方法名 | **Spring Data JPA** |
+| ② | `@Query` | `org.springframework.data.jpa.repository.Query` | **Spring Data JPA**（內容是 JPA 的 JPQL） |
+| ③ | `@NamedQuery` | `jakarta.persistence.NamedQuery` | **JPA** |
+| ④ | `@Modifying` + `@Query` | `org.springframework.data.jpa.repository.*` | **Spring Data JPA**（內容是 JPA 的 JPQL） |
+| ⑤ | `JdbcTemplate` | `org.springframework.jdbc.core.JdbcTemplate` | **Spring JDBC**（與 JPA 無關） |
+
+> 分辨方式就是看 import：`jakarta.persistence.*` = JPA、`org.springframework.data.*` = Spring Data、`org.springframework.jdbc.*` = Spring JDBC。
+> `ContactRepository.java` 的 import 裡**一個 `jakarta.persistence` 都沒有** —— 它用到的註解全是 Spring Data 的。
+
+**① Derived query** ｜ `Spring Data JPA` — 靠方法名自動生成 SQL
 
 ```java
 // PersonRepository — 全部方法都是這種，一行實作都沒寫
 Person readByEmail(String email);                        // WHERE email = ?
 boolean existsByEmail(String email);                     // 註冊時判斷重複
-boolean existsByEmailAndPersonIdNot(String email, int personId);  // 更新自己資料時排除自己
+boolean existsByEmailAndPersonIdNot(String email, int personId);  // 這個 email 是否已被「其他人」使用
 List<Person> findAllByOrderByPersonIdAsc();              // ORDER BY person_id ASC
 
 // CourseRepository
@@ -441,7 +446,7 @@ List<Course> findByOrderByNameDesc();                    // ORDER BY name DESC
 
 適合簡單條件；條件一多方法名會長到難以閱讀。
 
-**② `@Query` 自訂 JPQL — 可動態排序**
+**② `@Query` 自訂 JPQL** ｜ `Spring Data JPA` — 可動態排序
 
 ```java
 @Query("SELECT c FROM Contact c WHERE c.status = :status")
@@ -450,7 +455,7 @@ Page<Contact> findByStatusWithPageableAtQuery(@Param("status") String status, Pa
 
 **後台分頁實際用的就是這個** —— 因為 Spring Data 拿得到查詢字串，能把 `Pageable` 的排序接成 `ORDER BY`。
 
-**③ `@NamedQuery` — 查詢定義在 Entity 上**
+**③ `@NamedQuery`** ｜ `JPA` — 查詢定義在 Entity 上
 
 ```java
 // Contact.java
@@ -464,7 +469,7 @@ Page<Contact> findByStatusWithPageableNamed(String status, Pageable pageable);
 
 ⚠️ 啟動時就編譯驗證語法，但**查詢字串不可改寫**，所以搭 `Pageable` 時**排序不會生效**（分頁仍有效），Spring 會印 WARN 提醒。本專案保留它純粹作為對照。
 
-**④ `@Modifying` + `@Query` — 批次 UPDATE / DELETE**
+**④ `@Modifying` + `@Query`** ｜ `Spring Data JPA` — 批次 UPDATE / DELETE
 
 ```java
 @Transactional
@@ -479,10 +484,6 @@ int updateStatusById(String status, String updatedBy, int id);
 - **`@Transactional`** —— UPDATE / DELETE 必須在交易內，否則拋 `TransactionRequiredException`
 
 ⚠️ **稽核欄位要手動填。** 平常 `repository.save(entity)` 會先把 Entity 載入記憶體，Hibernate 才有物件可攔截，`AuditingEntityListener` 就在這時自動補上 `updatedBy` / `updatedAt`。但 JPQL 的 `UPDATE` / `DELETE`（JPA 稱為 **bulk operation**）**全程不載入任何 Entity**，直接把語句丟給資料庫 —— 沒有物件就沒有攔截點，稽核機制完全不會被觸發。
-
-> 這只影響 `UPDATE` / `DELETE`。JPQL 的 `SELECT`（例如上面 ② 的分頁查詢）回傳的是真正受管理的 Entity，改完再 `save()` 稽核照樣生效。
->
-> 另一個副作用：bulk operation 直接改 DB，**已載入記憶體的 Entity 不會同步**，會變成過期資料。`AdminController.closeMessage` 靠改完後 redirect 重新查詢來避開這點。
 
 所以：
 
@@ -499,7 +500,7 @@ contactRepository.updateStatusById(STATUS_CLOSED, authentication.getName(), id);
 //                                                 ↑ AuditorAware 平常會自己拿，這裡只能手動給
 ```
 
-**⑤ `JdbcTemplate` — 完全不走 JPA**
+**⑤ `JdbcTemplate`** ｜ `Spring JDBC` — 完全不走 JPA
 
 ```java
 // NewsRepository — 唯一一個 @Repository class（不是 interface）
@@ -513,13 +514,13 @@ public List<News> returnAListOfAllNewsItems() {
 
 #### 選擇建議
 
-| 情境 | 用哪個 |
-|---|---|
-| 簡單條件查詢 | ① Derived query |
-| 需要動態排序 / 複雜 JPQL | ② `@Query` |
-| 固定不變、想啟動時驗證 | ③ `@NamedQuery`（但**別搭 `Pageable`**） |
-| 批次 UPDATE / DELETE | ④ `@Modifying`（記得稽核欄位要手動填） |
-| 非 Entity 的表、或要寫原生 SQL | ⑤ `JdbcTemplate` |
+| 情境 | 用哪個 | 屬於 |
+|---|---|---|
+| 簡單條件查詢 | ① Derived query | Spring Data JPA |
+| 需要動態排序 / 複雜 JPQL | ② `@Query` | Spring Data JPA |
+| 固定不變、想啟動時驗證 | ③ `@NamedQuery`（但**別搭 `Pageable`**） | JPA |
+| 批次 UPDATE / DELETE | ④ `@Modifying`（記得稽核欄位要手動填） | Spring Data JPA |
+| 非 Entity 的表、或要寫原生 SQL | ⑤ `JdbcTemplate` | Spring JDBC |
 
 ### 📄 分頁 + 動態排序（Spring Data `Pageable`）
 
@@ -630,8 +631,6 @@ public String viewContactMessage(Model model,
 | **AdminActuator** | `starter-webmvc`、`spring-boot-admin-starter-server` |
 
 > ⚠️ Spring Boot Admin 的 `spring-boot-admin.version` 在 `MyWeb`（client）與 `AdminActuator`（server）兩邊**必須一致**，目前都是 `4.1.2`。
-
-> 📌 Boot 4 有幾個依賴改名或拆分（`starter-web` → `starter-webmvc`、H2 Console 獨立成模組等），整理在[附錄的升級筆記](#boot-4--java-25-升級筆記)。
 
 ---
 
