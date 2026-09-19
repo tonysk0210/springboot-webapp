@@ -56,7 +56,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - 使用內嵌 **H2** 記憶體資料庫（`jdbc:h2:mem:mydb`，附 `DB_CLOSE_DELAY=-1` 讓 devtools restart / HikariCP 回收連線時 DB 不會被銷毀），Console 位於 `http://localhost:8081/h2-console`
 - **`schema.sql` 是 schema 的唯一真相** — `spring.jpa.hibernate.ddl-auto=validate`，Hibernate 只在啟動時對照 `src/main/resources/sql/schema.sql` **驗證** JPA Entity（型別、欄位缺失就啟動失敗），**不會** 依 Entity 修改 DB。新增/變更欄位時：改 `schema.sql` DDL **並** 同步 `model/` 底下 Entity 標註，兩邊不一致啟動就會炸
 - 初始資料（含兩個 BCrypt 加密的預設帳號：`admin@gmail.com` / `admin` 與 `student@gmail.com` / `123`）放在 `src/main/resources/sql/data.sql`；路徑透過 `spring.sql.init.{schema,data}-locations` 明確指定
-- JPA Entity：`Person`、`Roles`、`Address`、`Plan`、`Courses`、`Contact`。`Person` 擁有到 `Roles`、`Address`、`Plan` 的外鍵，並透過 `person_courses` 中介表對 `Courses` 做多對多 — 全部為 `FetchType.EAGER`
+- JPA Entity：`Person`、`Role`、`Address`、`Plan`、`Course`、`Contact`。`Person` 擁有到 `Role`、`Address`、`Plan` 的外鍵，並透過 `person_courses` 中介表對 `Course` 做多對多 — 全部為 `FetchType.EAGER`
 - 稽核欄位來自 `model/BaseEntity`；`Person` **刻意覆蓋** `createdBy` 欄位，以避免未登入註冊時 insert 失敗
 - `model/` 底下有 **兩個非 JPA 類別**，勿誤加 `@Entity`：
   - `News` — 純 POJO，透過 `NewsRepository` 用 **`JdbcTemplate` + `BeanPropertyRowMapper`** 讀取；`news` 表只存在於 `schema.sql`

@@ -3,11 +3,11 @@
 
     <pre><code>@GetMapping("/signUpCourses")
 public String signUpCourses(Model model, HttpSession session) {
-    List&lt;Courses&gt; courseList = coursesRepository.findAll(); <span> // 取得所有已開設的課程 List&lt;Courses&gt;</span>
+    List&lt;Course&gt; courseList = coursesRepository.findAll(); <span> // 取得所有已開設的課程 List&lt;Course&gt;</span>
     model.addAttribute("courseList", courseList); <span> // 將 courseList 加入 Model，供前端顯示課程清單供學生選購</span>
 
     Person person = (Person) session.getAttribute("loggedInPerson"); <span> // 從 Session 中取得當前登入的學生 Person 物件 </span>
-    model.addAttribute("alreadyRegisteredCourses", person.getCourses()); <span> // 將學生已註冊的課程集合（Set&lt;Courses&gt;）加入 Model，供前端與開設課程對照使用</span>
+    model.addAttribute("alreadyRegisteredCourses", person.getCourses()); <span> // 將學生已註冊的課程集合（Set&lt;Course&gt;）加入 Model，供前端與開設課程對照使用</span>
     return "/authenticated/studentOnly/signUpCourses"; <span> // 導向學生專屬的選課頁面</span>
 }</code></pre>
     <p>

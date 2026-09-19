@@ -5,7 +5,7 @@
         將目前所有已存在的 <code>List&lt;Course&gt;</code> 資料傳遞至前端進行渲染。
     </p>
     <pre><code>@ModelAttribute("courseList")
-public List&lt;Courses&gt; displayAllCourses() {
+public List&lt;Course&gt; displayAllCourses() {
     <span>// 從資料庫中查詢所有 Course 物件，並根據 courseId 欄位以「升冪排序（ascending）」的方式回傳結果。</span>
     return coursesRepository.findAll(Sort.by(Sort.Direction.ASC, "courseId"));
 }</code></pre>
@@ -40,10 +40,10 @@ private Set&lt;Person&gt; persons = new HashSet&lt;&gt;();
 
 <span>// 擁有端負責維護關聯關係並主導中介表（JoinTable）的結構與更新操作</code></pre>
 
-    <pre><code>Optional&lt;Courses&gt;  courseToBeDeletedOptional = coursesRepository.findById(courseId);
-Courses courseToBeDeleted = courseToBeDeletedOptional.get(); <span>// 取得要刪除的 Course 物件 </span>
+    <pre><code>Optional&lt;Course&gt;  courseToBeDeletedOptional = coursesRepository.findById(courseId);
+Course courseToBeDeleted = courseToBeDeletedOptional.get(); <span>// 取得要刪除的 Course 物件 </span>
 for (Person person : courseToBeDeleted.getPersons()) { <span>      // 逐一處理所有註冊此課程的學生</span>
-    person.getCourses().remove(courseToBeDeleted); <span>          // 從每位學生的 Courses 集合中移除該課程（解除關聯） </span>
+    person.getCourses().remove(courseToBeDeleted); <span>          // 從每位學生的 courses 集合中移除該課程（解除關聯） </span>
     personRepository.save(person); <span>                          // 儲存變更，更新資料庫中的關聯 (可省略)</span>
 
 coursesRepository.deleteById(courseId);<span>                      // 全部解除關聯後，刪除該課程</span></code></pre>

@@ -18,7 +18,8 @@ import java.util.Set;
 @Getter
 @Setter
 @Entity
-public class Courses extends BaseEntity {
+@Table(name = "courses")
+public class Course extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

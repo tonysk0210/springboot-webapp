@@ -29,7 +29,7 @@
     <pre><code>@PostMapping("/addCourseStudent")
 public String addCourseStudent(Person person, HttpSession session) {
 
-    Courses courseInSession = (Courses) session.getAttribute("courseInSession"); <span>// 從 Session 取得當前要新增學生的 Course 物件</span>
+    Course courseInSession = (Course) session.getAttribute("courseInSession"); <span>// 從 Session 取得當前要新增學生的 Course 物件</span>
 
     Person thePerson = personRepository.readByEmail(person.getEmail()); <span>// 根據輸入的 email 查詢學生是否存在（驗證學生帳號）</span>
 
@@ -56,7 +56,7 @@ public String deleteCourseStudent(@RequestParam int personId, HttpSession sessio
     Optional&lt;Person&gt; personTobeRemovedOptional = personRepository.findById(personId);
     Person personTobeRemoved = personTobeRemovedOptional.get(); <span>// 根據「Remove」傳入的 personId 取得對應的 Person 物件</span>
 
-    Courses courseInSession = (Courses) session.getAttribute("courseInSession"); <span>// 取得當前課程 Course 物件</span>
+    Course courseInSession = (Course) session.getAttribute("courseInSession"); <span>// 取得當前課程 Course 物件</span>
 
     personTobeRemoved.getCourses().remove(courseInSession); <span>// 由擁有端 Person 解除與 Course 的關聯</span>
     personRepository.save(personTobeRemoved); <span>//　儲存變更，更新資料庫中的關聯資訊</span>

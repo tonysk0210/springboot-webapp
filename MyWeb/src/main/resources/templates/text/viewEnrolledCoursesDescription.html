@@ -4,7 +4,7 @@
     <p class="course-paragraph">
         當學生登入系統並進入課程頁面時，系統會從 <code>HttpSession</code> 中取得先前在 Dashboard 中儲存的 <strong> "loggedInPerson" </strong> 物件，代表當前登入的學生。
         該 <code>Person</code> 物件將透過 <code>Model</code> 傳遞至前端，供 Thymeleaf 頁面進行資料綁定與渲染使用。
-        頁面將顯示學生姓名（<code>person.name</code>），並透過其 <code>Set&lt;Courses&gt; courses</code> 屬性列出所有已註冊的課程，包含課程名稱與費用等資訊。
+        頁面將顯示學生姓名（<code>person.name</code>），並透過其 <code>Set&lt;Course&gt; courses</code> 屬性列出所有已註冊的課程，包含課程名稱與費用等資訊。
         此功能可協助學生快速查閱其目前所選修的所有課程，有效提升系統的便利性與整體使用體驗。
     </p>
 

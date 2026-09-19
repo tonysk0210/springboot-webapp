@@ -13,7 +13,8 @@ import lombok.Setter;
 @Getter
 @Setter
 @Entity
-public class Roles extends BaseEntity {
+@Table(name = "roles")
+public class Role extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int roleId;

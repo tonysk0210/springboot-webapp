@@ -15,7 +15,7 @@ import java.util.Set;
 
 /**
  * 使用者 Entity — 對應 DB 表 `person`（schema.sql）
- * 關聯：Roles、Address、Plan（外鍵在此），Courses（多對多，中介表 person_courses）
+ * 關聯：Role、Address、Plan（外鍵在此），Course（多對多，中介表 person_courses）
  * 註：表單驗證註解為權宜作法，嚴謹寫法應搬到 DTO 層
  */
 @Getter
@@ -44,18 +44,18 @@ public class Person extends BaseEntity {
     private String email;
     
     @Transient // @Transient：表單專用欄位，不入 DB
-    @JsonIgnore
+    @JsonIgnore // 不讓表單確認欄位出現在 REST JSON；@Transient 才負責不存入 DB
     private String confirmEmail;
 
     // 自訂 field-level validator：檢查密碼強度（非 null、非弱密碼清單、長度 >= 8）
     //   - 實作在 myValidation/PasswordValidatorImpl
     //   - 三種失敗各有自訂訊息，不使用註解上的 message 預設值
     @PasswordValidator
-    @JsonIgnore
+    @JsonIgnore // 避免密碼（即使已加密）出現在 REST JSON，也不接受 JSON 回填
     private String password;
 
     @Transient // @Transient：表單專用欄位，不入 DB
-    @JsonIgnore
+    @JsonIgnore // 不讓表單確認欄位出現在 REST JSON；@Transient 才負責不存入 DB
     private String confirmPassword;
 
     /*
@@ -74,7 +74,7 @@ public class Person extends BaseEntity {
      *   - 結果：DB 內 created_by = 註冊者 email
      *
      * 只影響 Person：Field shadowing 是 per-class 的，只在此類生效，不會外溢到其他繼承 BaseEntity 的 Entity。
-     *   - Contact / Address / Roles / Plan / Courses 都沒 shadow → 走 BaseEntity 的正常稽核流程
+     *   - Contact / Address / Role / Plan / Course 都沒 shadow → 走 BaseEntity 的正常稽核流程
      *     （登入者的 email，或未登入時的 "anonymousUser"）
      *   - News 不是 @Entity（走 JdbcTemplate），與此完全無關
      *   - 只有 Person 註冊有「chicken-and-egg」時序問題：被建立的人就是自己，但還沒登入
@@ -86,7 +86,7 @@ public class Person extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.EAGER, optional = false)
     @JoinColumn(name = "role_id", nullable = false)
-    private Roles roles;
+    private Role roles;
 
     @OneToOne(fetch = FetchType.EAGER, cascade = {CascadeType.MERGE})
     @JoinColumn(name = "address_id")
@@ -101,6 +101,6 @@ public class Person extends BaseEntity {
     @JoinTable(name = "person_courses",
             joinColumns = @JoinColumn(name = "person_id"),
             inverseJoinColumns = @JoinColumn(name = "course_id"))
-    private Set<Courses> courses = new HashSet<>();
+    private Set<Course> courses = new HashSet<>();
 
 }

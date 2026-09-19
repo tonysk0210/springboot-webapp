@@ -16,7 +16,7 @@
         <button class="button button--primary" type="button" data-dialog-open="courseModal"><i class="fa-solid fa-plus" aria-hidden="true"></i> 新增課程</button>
     </div>
 
-    <!-- 新增課程的驗證錯誤訊息（透過 Courses 上的 @Valid 觸發）；#fields.hasErrors() 回 List<String> -->
+    <!-- 新增課程的驗證錯誤訊息（透過 Course 上的 @Valid 觸發）；#fields.hasErrors() 回 List<String> -->
     <ul class="error-list" th:if="${#fields.hasErrors('course.*')}">
         <li th:each="error : ${#fields.errors('course.*')}" th:text="${error}"></li>
     </ul>

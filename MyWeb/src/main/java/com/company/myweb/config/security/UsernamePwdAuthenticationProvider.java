@@ -1,7 +1,7 @@
 package com.company.myweb.config.security;
 
 import com.company.myweb.model.Person;
-import com.company.myweb.model.Roles;
+import com.company.myweb.model.Role;
 import com.company.myweb.repository.PersonRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -80,10 +80,10 @@ public class UsernamePwdAuthenticationProvider implements AuthenticationProvider
     }
 
     /**
-     * 把 Roles 物件轉為 Spring Security 的 GrantedAuthority 清單
+     * 把 Role 物件轉為 Spring Security 的 GrantedAuthority 清單
      * Spring Security 用 GrantedAuthority 判斷資源存取權限；可支援多角色
      */
-    private List<GrantedAuthority> getGrantedAuthorities(Roles roles) {
+    private List<GrantedAuthority> getGrantedAuthorities(Role roles) {
         List<GrantedAuthority> grantedAuthorities = new ArrayList<>();
         // .hasRole("ADMIN") 內部會檢查 List<GrantedAuthority> 是否包含 "ROLE_ADMIN"，故此處加 ROLE_ 前綴
         grantedAuthorities.add(new SimpleGrantedAuthority("ROLE_" + roles.getRoleName()));

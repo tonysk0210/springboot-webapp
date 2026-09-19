@@ -3,9 +3,9 @@ package com.company.myweb.service;
 import com.company.myweb.constant.ProjectConstant;
 import com.company.myweb.exception.EmailAlreadyExistsException;
 import com.company.myweb.model.Person;
-import com.company.myweb.model.Roles;
+import com.company.myweb.model.Role;
 import com.company.myweb.repository.PersonRepository;
-import com.company.myweb.repository.RolesRepository;
+import com.company.myweb.repository.RoleRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -18,11 +18,11 @@ import static com.company.myweb.constant.ProjectConstant.ANSI_RESET;
 @Service
 public class PersonService {
     private PersonRepository personRepository;
-    private RolesRepository rolesRepository;
+    private RoleRepository rolesRepository;
     private PasswordEncoder passwordEncoder;
 
     @Autowired
-    public PersonService(PersonRepository personRepository, RolesRepository rolesRepository, PasswordEncoder passwordEncoder) {
+    public PersonService(PersonRepository personRepository, RoleRepository rolesRepository, PasswordEncoder passwordEncoder) {
         this.personRepository = personRepository;
         this.rolesRepository = rolesRepository;
         this.passwordEncoder = passwordEncoder;
@@ -36,8 +36,8 @@ public class PersonService {
         }
 
         // 至此 name、mobile、email、password 都是使用者透過註冊表單填的原始值
-        Roles roles = rolesRepository.getByRoleName(ProjectConstant.STUDENT_ROLE);
-        person.setRoles(roles);                                          // 2) 指派 STUDENT 角色
+        Role roles = rolesRepository.getByRoleName(ProjectConstant.STUDENT_ROLE);
+        person.setRoles(roles);                                         // 2) 指派 STUDENT 角色
         person.setPassword(passwordEncoder.encode(person.getPassword())); // 3) 密碼 BCrypt 加密
 
         // 註冊當下使用者尚未登入 → SecurityContext 內沒 Authentication → AuditorAware 會回 "anonymousUser"

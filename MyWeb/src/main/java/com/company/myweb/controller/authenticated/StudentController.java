@@ -1,8 +1,8 @@
 package com.company.myweb.controller.authenticated;
 
-import com.company.myweb.model.Courses;
+import com.company.myweb.model.Course;
 import com.company.myweb.model.Person;
-import com.company.myweb.repository.CoursesRepository;
+import com.company.myweb.repository.CourseRepository;
 import com.company.myweb.repository.PersonRepository;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,11 +17,11 @@ import java.util.List;
 @RequestMapping("/student")
 public class StudentController {
 
-    private final CoursesRepository coursesRepository;
+    private final CourseRepository coursesRepository;
     private final PersonRepository personRepository;
 
     @Autowired
-    public StudentController(CoursesRepository coursesRepository, PersonRepository personRepository) {
+    public StudentController(CourseRepository coursesRepository, PersonRepository personRepository) {
         this.coursesRepository = coursesRepository;
         this.personRepository = personRepository;
     }
@@ -42,7 +42,7 @@ public class StudentController {
      */
     @GetMapping("/signUpCourses")
     public String signUpCourses(Model model, HttpSession session) {
-        List<Courses> courseList = coursesRepository.findAll();
+        List<Course> courseList = coursesRepository.findAll();
         model.addAttribute("courseList", courseList);
         Person person = (Person) session.getAttribute("loggedInPerson");
         model.addAttribute("alreadyRegisteredCourses", person.getCourses());

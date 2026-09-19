@@ -31,22 +31,22 @@ public class BaseEntity {
 
     @CreatedDate
     @Column(updatable = false)
-    @JsonIgnore // @JsonIgnore = 這個欄位在 JSON（或 XML）序列化 / 反序列化時被 Jackson 完全忽略
+    @JsonIgnore // 隱藏於 REST JSON；不影響 JPA 對資料庫的持久化
     private LocalDateTime createdAt;
 
     @CreatedBy
     @Column(updatable = false)
-    @JsonIgnore
+    @JsonIgnore // 隱藏稽核者，不讓 REST API 輸出或接收此欄位
     private String createdBy;
 
     @LastModifiedDate
     @Column(insertable = false)
-    @JsonIgnore
+    @JsonIgnore // 隱藏於 REST JSON；資料庫欄位仍由 JPA 稽核機制管理
     private LocalDateTime updatedAt;
 
     @LastModifiedBy
     @Column(insertable = false)
-    @JsonIgnore
+    @JsonIgnore // 隱藏稽核者，不讓 REST API 輸出或接收此欄位
     private String updatedBy;
 }
 

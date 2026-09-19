@@ -37,29 +37,22 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webmvc</artifactId>
         </dependency>
-        <!-- thymeleaf: 帶入 Thymeleaf 引擎 + thymeleaf-spring6 整合。
-             自動註冊 SpringTemplateEngine 與 ThymeleafViewResolver — controller
-             回傳字串會解析為 classpath:/templates/<name>.html（預設 prefix=classpath:/templates/、
-             suffix=.html）。搭配 devtools 會自動關閉 spring.thymeleaf.cache 以支援模板熱重載。 -->
+        <!-- 加入 Thymeleaf，讓 Controller 回傳 view 名稱並解析 templates/*.html -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-thymeleaf</artifactId>
         </dependency>
-        <!-- devtools -->
-        <!-- <scope>runtime</scope>：編譯時看不到、執行時才載入；程式碼無法 import 此依賴的類別 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-devtools</artifactId>
             <scope>runtime</scope>
             <optional>true</optional>
         </dependency>
-        <!-- lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <optional>true</optional>
         </dependency>
-        <!-- validation -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
@@ -74,7 +67,6 @@
             <groupId>org.thymeleaf.extras</groupId>
             <artifactId>thymeleaf-extras-springsecurity6</artifactId>
         </dependency>
-        <!-- h2 database -->
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
@@ -99,29 +91,28 @@
             <artifactId>jackson-dataformat-xml</artifactId>
         </dependency>
 
-        <!-- data rest (Spring data REST API) -->
+        <!-- 依 JpaRepository 自動產生 REST CRUD API -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-rest</artifactId>
         </dependency>
-        <!-- hal explorer (Spring dat REST API) -->
+        <!-- 提供 Spring Data REST 的 HAL API 瀏覽介面 -->
         <dependency>
             <groupId>org.springframework.data</groupId>
             <artifactId>spring-data-rest-hal-explorer</artifactId>
         </dependency>
-        <!-- actuator -->
+        <!-- 提供健康檢查、資訊與 Metrics 管理端點 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
-        <!-- codecentric actuator admin client-->
+        <!-- 將 MyWeb 註冊到 Spring Boot Admin Server -->
         <dependency>
             <groupId>de.codecentric</groupId>
             <artifactId>spring-boot-admin-starter-client</artifactId>
             <version>${spring-boot-admin.version}</version>
         </dependency>
-        <!-- works in conjunction with actuator — 版本由 Spring Boot BOM 管理，
-             Boot 4.1 對應 Hibernate 7.x -->
+        <!-- 將 Hibernate/JPA 統計整合到 Micrometer Metrics -->
         <dependency>
             <groupId>org.hibernate.orm</groupId>
             <artifactId>hibernate-micrometer</artifactId>

@@ -1,10 +1,10 @@
 package com.company.myweb.controller.authenticated;
 
 import com.company.myweb.model.Contact;
-import com.company.myweb.model.Courses;
+import com.company.myweb.model.Course;
 import com.company.myweb.model.Plan;
 import com.company.myweb.model.Person;
-import com.company.myweb.repository.CoursesRepository;
+import com.company.myweb.repository.CourseRepository;
 import com.company.myweb.repository.PlanRepository;
 import com.company.myweb.repository.PersonRepository;
 import com.company.myweb.service.ContactService;
@@ -34,7 +34,7 @@ public class AdminController {
     private final ContactService contactService;
     private final PlanRepository planRepository;
     private final PersonRepository personRepository;
-    private final CoursesRepository coursesRepository;
+    private final CourseRepository coursesRepository;
 
     // 聯絡訊息（舊版無分頁的寫法保留參考）
 //    @GetMapping("/contactMessage")
@@ -228,16 +228,16 @@ public class AdminController {
      * 這裡取所有 Course（依 courseId 升冪）供模板顯示
      */
     @ModelAttribute("courseList")
-    public List<Courses> displayAllCourses() {
+    public List<Course> displayAllCourses() {
         return coursesRepository.findAll(Sort.by(Sort.Direction.ASC, "courseId")); // JPA 動態排序
     }
 
     /**
-     * 顯示新增課程頁面 — 送一個空 Courses 給前端表單綁定
+     * 顯示新增課程頁面 — 送一個空 Course 給前端表單綁定
      */
     @GetMapping("/coursePage")
     public String coursePage(Model model) {
-        model.addAttribute("course", new Courses());
+        model.addAttribute("course", new Course());
         return "authenticated/adminOnly/coursePage";
     }
 
@@ -245,7 +245,7 @@ public class AdminController {
      * 驗證後新增課程 — 驗證失敗回原頁；成功則存檔並 redirect
      */
     @PostMapping("/addNewCourse")
-    public String addNewCourse(@Valid @ModelAttribute("course") Courses course, BindingResult result) {
+    public String addNewCourse(@Valid @ModelAttribute("course") Course course, BindingResult result) {
         if (result.hasErrors()) return "authenticated/adminOnly/coursePage";
         coursesRepository.save(course);
         return "redirect:/admin/coursePage";
@@ -257,8 +257,8 @@ public class AdminController {
     @GetMapping("/deleteCourse")
     public String deleteCourse(@RequestParam int courseId) {
         // 1) 依 courseId 取要刪的課程
-        Optional<Courses> courseToBeDeletedOptional = coursesRepository.findById(courseId);
-        Courses courseToBeDeleted = courseToBeDeletedOptional.get();
+        Optional<Course> courseToBeDeletedOptional = coursesRepository.findById(courseId);
+        Course courseToBeDeleted = courseToBeDeletedOptional.get();
         // 2) 從每個已選修者的 courses 集合移除此課程（owning side）
         for (Person person : courseToBeDeleted.getPersons()) {
             person.getCourses().remove(courseToBeDeleted);
@@ -278,8 +278,8 @@ public class AdminController {
     @GetMapping("/viewCourseDetail")
     public String viewCourseDetail(@RequestParam int courseId, Model model, HttpSession session) {
         // 1) 依 courseId 取課程
-        Optional<Courses> courseDetailOptional = coursesRepository.findById(courseId);
-        Courses courseDetail = courseDetailOptional.get();
+        Optional<Course> courseDetailOptional = coursesRepository.findById(courseId);
+        Course courseDetail = courseDetailOptional.get();
         // 2) 送 course 與空 person 給模板
         model.addAttribute("course", courseDetail);
         model.addAttribute("person", new Person());
@@ -294,7 +294,7 @@ public class AdminController {
     @PostMapping("/addCourseStudent")
     public String addCourseStudent(Person person, HttpSession session) {
         // 1) 從 session 取當前課程
-        Courses courseInSession = (Courses) session.getAttribute("courseInSession");
+        Course courseInSession = (Course) session.getAttribute("courseInSession");
         // 2) 依 admin 輸入的 email 查 Person
         Person thePerson = personRepository.readByEmail(person.getEmail());
         // 3) 找不到 → 回原頁顯示錯誤
@@ -320,7 +320,7 @@ public class AdminController {
         Optional<Person> personTobeRemovedOptional = personRepository.findById(personId);
         Person personTobeRemoved = personTobeRemovedOptional.get();
         // 2) 從 session 取當前課程
-        Courses courseInSession = (Courses) session.getAttribute("courseInSession");
+        Course courseInSession = (Course) session.getAttribute("courseInSession");
         // 3) 從 person.courses 拿掉此課程，走 owning side save
         personTobeRemoved.getCourses().remove(courseInSession);
         personRepository.save(personTobeRemoved);
