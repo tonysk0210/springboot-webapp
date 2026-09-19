@@ -375,6 +375,83 @@ private Set<Course> courses = new HashSet<>();             // 型別 Course → 
 | **效能記錄** | `LoggerAspect` `@Around` | 每個業務方法的參數、耗時、回傳值 |
 | **例外記錄** | `LoggerAspect` `@AfterThrowing` | 全範圍攔截，含 stack trace |
 
+### 🔍 JPA 查詢寫法對照（同一件事，五種寫法）
+
+`repository/` 刻意用**同一份資料**示範各種查詢方式，方便直接比較優缺點。
+
+**① Derived query — 靠方法名自動生成 SQL**
+
+```java
+// PersonRepository — 全部方法都是這種，一行實作都沒寫
+Person readByEmail(String email);                        // WHERE email = ?
+boolean existsByEmail(String email);                     // 註冊時判斷重複
+boolean existsByEmailAndPersonIdNot(String email, int personId);  // 更新自己資料時排除自己
+List<Person> findAllByOrderByPersonIdAsc();              // ORDER BY person_id ASC
+
+// CourseRepository
+List<Course> findByOrderByNameDesc();                    // ORDER BY name DESC
+```
+
+適合簡單條件；條件一多方法名會長到難以閱讀。
+
+**② `@Query` 自訂 JPQL — 可動態排序**
+
+```java
+@Query("SELECT c FROM Contact c WHERE c.status = :status")
+Page<Contact> findByStatusWithPageableAtQuery(@Param("status") String status, Pageable pageable);
+```
+
+**後台分頁實際用的就是這個** —— 因為 Spring Data 拿得到查詢字串，能把 `Pageable` 的排序接成 `ORDER BY`。
+
+**③ `@NamedQuery` — 查詢定義在 Entity 上**
+
+```java
+// Contact.java
+@NamedQuery(name = "Contact.findByStatusWithPageableNamed",
+            query = "SELECT c FROM Contact c WHERE c.status = :status")
+
+// ContactRepository.java
+@Query(name = "Contact.findByStatusWithPageableNamed")
+Page<Contact> findByStatusWithPageableNamed(String status, Pageable pageable);
+```
+
+⚠️ 啟動時就編譯驗證語法，但**查詢字串不可改寫**，所以搭 `Pageable` 時**排序不會生效**（分頁仍有效），Spring 會印 WARN 提醒。本專案保留它純粹作為對照。
+
+**④ `@Modifying` + `@Query` — 寫入型查詢**
+
+```java
+@Transactional
+@Modifying
+@Query("UPDATE Contact c SET c.status = ?1, c.updatedAt = CURRENT_TIMESTAMP, c.updatedBy = ?2 WHERE c.contactId = ?3")
+int updateStatusById(String status, String updatedBy, int id);
+```
+
+用於後台「關閉訊息」。兩個必要註解：`@Modifying` 宣告這不是 SELECT、`@Transactional` 因為 UPDATE 必須在交易內。
+
+⚠️ **這種 bulk update 會繞過 JPA lifecycle，`AuditorAware` 不會自動填 `updatedBy`** —— 所以 SQL 裡得手動寫進去（`ContactService.updateContactStatus` 把 `authentication.getName()` 傳進來）。
+
+**⑤ `JdbcTemplate` — 完全不走 JPA**
+
+```java
+// NewsRepository — 唯一一個 @Repository class（不是 interface）
+public List<News> returnAListOfAllNewsItems() {
+    return jdbcTemplate.query("SELECT * FROM news",
+            BeanPropertyRowMapper.newInstance(News.class));
+}
+```
+
+`News` 是**純 POJO 不是 Entity**，`news` 表只存在於 `schema.sql`。`BeanPropertyRowMapper` 用反射把欄位對到 setter，並自動處理 `released_date` ↔ `releasedDate` 的命名轉換。
+
+#### 選擇建議
+
+| 情境 | 用哪個 |
+|---|---|
+| 簡單條件查詢 | ① Derived query |
+| 需要動態排序 / 複雜 JPQL | ② `@Query` |
+| 固定不變、想啟動時驗證 | ③ `@NamedQuery`（但**別搭 `Pageable`**） |
+| 批次 UPDATE / DELETE | ④ `@Modifying`（記得稽核欄位要手動填） |
+| 非 Entity 的表、或要寫原生 SQL | ⑤ `JdbcTemplate` |
+
 ### 📄 分頁 + 動態排序（Spring Data `Pageable`）
 
 後台聯絡訊息列表（`/admin/viewContactMessage/page/{n}`）示範了 **Spring Data 分頁的完整一條龍**：每頁筆數由設定檔控制、欄位可點擊排序、翻頁與排序狀態互相保留。
@@ -448,8 +525,6 @@ public String viewContactMessage(Model model,
 ```
 
 每個欄位標頭都是一個連結，**帶著當前頁碼**過去 —— 所以排序後不會跳回第一頁；目前排序中的欄位顯示 `↑` / `↓`，其餘顯示 `↑↓`。
-
-> ⚠️ `ContactRepository` 裡另外兩個同功能的方法是**教學對照用**：`readByStatus`（Derived query）與 `findByStatusWithPageableNamed`（`@NamedQuery`）。**實際使用的是 `findByStatusWithPageableAtQuery`（`@Query`）** —— 因為 `@NamedQuery` 搭配 `Pageable` 時**排序不會生效**（啟動時 Spring 會印 WARN 提醒）。
 
 ### ✅ 自訂 Bean Validation
 
