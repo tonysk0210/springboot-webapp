@@ -2,6 +2,8 @@
 
 > **一個 Spring Boot 4.1 + Java 25 的多模組練習場** — 用三個可獨立啟動的應用，把 Web MVC、REST API、微服務通訊與應用監控四件事完整串起來。
 
+主應用對外的產品名是 **SpringWise** — 一個模擬的線上課程學習平台：匿名訪客可瀏覽課程與最新消息，學生可註冊帳號並選課，管理員則有課程／方案／聯絡訊息的後台。整個 repo 的重點不在業務複雜度，而在**同一份資料用多種 Spring 技術棧實作一遍**，方便對照學習。
+
 <p>
   <img alt="Java" src="https://img.shields.io/badge/Java-25-orange">
   <img alt="Spring Boot" src="https://img.shields.io/badge/Spring%20Boot-4.1.0-6DB33F">
@@ -12,7 +14,7 @@
 
 | 模組 | Port | 一句話定位 |
 |---|---|---|
-| [`MyWeb`](./MyWeb) | **8081** | 主應用 — Thymeleaf 前端 + 表單登入 + REST API + Spring Data REST + Actuator client |
+| [`MyWeb`](./MyWeb) | **8081** | 主應用「**SpringWise**」— Thymeleaf 前端 + 表單登入 + REST API + Spring Data REST + Actuator client |
 | [`ConsumingRestService`](./ConsumingRestService) | **8082** | REST client 教學 — 用 **OpenFeign / RestTemplate / WebClient** 三種寫法呼叫 `MyWeb` |
 | [`AdminActuator`](./AdminActuator) | **8083** | **Spring Boot Admin Server** — 監控 `MyWeb` 的 Web UI |
 
@@ -60,24 +62,34 @@ flowchart TD
 
 ### 畫面截圖
 
-> 📸 **截圖尚未加入。** 下表是建議補齊的清單 — 把檔案放進 `docs/screenshots/` 後，取消對應行的註解即可顯示。
+#### 首頁
 
-| 檔名 | 擷取位置 | 需要的帳號 |
-|---|---|---|
-| `home.png` | <http://localhost:8081/> | 不需登入 |
-| `login.png` | <http://localhost:8081/login> | 不需登入 |
-| `register.png` | <http://localhost:8081/public/register> | 不需登入 |
-| `dashboard.png` | <http://localhost:8081/dashboard> | 任一帳號 |
-| `admin-contact.png` | <http://localhost:8081/admin/viewContactMessage/page/1> | `admin@gmail.com` |
-| `admin-plan.png` | <http://localhost:8081/admin/planPage> | `admin@gmail.com` |
-| `student-courses.png` | <http://localhost:8081/student/signUpCourses> | `student@gmail.com` |
-| `hal-explorer.png` | <http://localhost:8081/spring-data-api/> | `admin@gmail.com` |
-| `boot-admin.png` | <http://localhost:8083> | 不需登入（Admin Server 未設安全性）|
+![SpringWise 首頁 — hero 區與角色權限總覽](docs/screenshots/home.png)
+
+#### 待補的截圖
+
+> 📸 把檔案放進 `docs/screenshots/`，然後**把下面對應那行從註解區塊移出來**（`<!--` / `-->` 之間的內容不會被渲染）。
+
+| 檔名 | 擷取位置 | 需要的帳號 | 狀態 |
+|---|---|---|---|
+| `home.png` | <http://localhost:8081/> | 不需登入 | ✅ 已加入 |
+| `login.png` | <http://localhost:8081/login> | 不需登入 | ⬜ |
+| `register.png` | <http://localhost:8081/public/register> | 不需登入 | ⬜ |
+| `dashboard.png` | <http://localhost:8081/dashboard> | 任一帳號 | ⬜ |
+| `admin-contact.png` | <http://localhost:8081/admin/viewContactMessage/page/1> | `admin@gmail.com` | ⬜ |
+| `admin-plan.png` | <http://localhost:8081/admin/planPage> | `admin@gmail.com` | ⬜ |
+| `student-courses.png` | <http://localhost:8081/student/signUpCourses> | `student@gmail.com` | ⬜ |
+| `hal-explorer.png` | <http://localhost:8081/spring-data-api/> | `admin@gmail.com` | ⬜ |
+| `boot-admin.png` | <http://localhost:8083> | 不需登入（Admin Server 未設安全性）| ⬜ |
 
 <!--
-![首頁](docs/screenshots/home.png)
-![登入](docs/screenshots/login.png)
-![後台聯絡訊息](docs/screenshots/admin-contact.png)
+![登入頁](docs/screenshots/login.png)
+![註冊頁](docs/screenshots/register.png)
+![Dashboard](docs/screenshots/dashboard.png)
+![後台 — 聯絡訊息管理](docs/screenshots/admin-contact.png)
+![後台 — 方案管理](docs/screenshots/admin-plan.png)
+![學生 — 報名課程](docs/screenshots/student-courses.png)
+![HAL Explorer](docs/screenshots/hal-explorer.png)
 ![Boot Admin 監控](docs/screenshots/boot-admin.png)
 -->
 
