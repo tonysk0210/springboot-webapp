@@ -382,7 +382,7 @@ private Set<Course> courses = new HashSet<>();             // 型別 Course → 
 **① 每頁筆數外部化，而且會被驗證**
 
 ```java
-// config/MyWebProperties — @ConfigurationProperties + @Validated
+// config/MyWebProperties.java — @ConfigurationProperties + @Validated
 @Min(value = 5, message = "數值必須介於 5 到 10 之間")
 @Max(value = 10, message = "數值必須介於 5 到 10 之間")
 private int paginationPageSize;
@@ -407,14 +407,26 @@ Pageable pageable = PageRequest.of(
 return contactRepository.findByStatusWithPageableAtQuery(STATUS_OPEN, pageable);
 ```
 
-Spring Data 會自動把它翻譯成分頁 SQL，**不用自己寫**。實際產生的語句（H2 / Hibernate 7 用 SQL 標準語法，不是 `LIMIT`）：
+Spring Data 會自動把它翻譯成分頁 SQL，**不用自己寫**。以每頁 5 筆為例：
 
 ```sql
--- 第 1 頁：index 0，不需要跳過 → 連 offset 子句都省略
-order by c1_0.contact_id fetch first ? rows only
--- 第 2 頁以後：index 1, 2, 3…
-order by c1_0.contact_id offset ? rows fetch first ? rows only
+-- 第 1 頁 → 取前 5 筆
+... order by contact_id fetch first 5 rows only
+
+-- 第 2 頁 → 先跳過 5 筆，再取 5 筆
+... order by contact_id offset 5 rows fetch first 5 rows only
+
+-- 第 3 頁 → 先跳過 10 筆，再取 5 筆
+... order by contact_id offset 10 rows fetch first 5 rows only
 ```
+
+| 頁 | 跳過 | 取 | 拿到第幾筆 |
+|---|---|---|---|
+| 1 | 0 | 5 | 1–5 |
+| 2 | 5 | 5 | 6–10 |
+| 3 | 10 | 5 | 11–15 |
+
+重點是**分頁在資料庫做完才回傳** —— 不是撈出全部再用 Java 切，資料量大時差很多。
 
 **③ Controller 把分頁狀態交給模板**
 

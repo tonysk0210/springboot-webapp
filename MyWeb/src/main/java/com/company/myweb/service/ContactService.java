@@ -53,9 +53,9 @@ public class ContactService {
         // 1) 建立 Pageable
         Pageable pageable = PageRequest.of(
                 currentPageNum - 1,                                                     // 1. 頁碼由 0 開始，扣掉使用者輸入的 1
-                sizePerPage,                                                            // 2. 每頁筆數
-                sortDir.equals("asc") ? Sort.Direction.ASC : Sort.Direction.DESC,       // 3. 排序方向
-                sortField                                                               // 4. 排序欄位
+                sizePerPage,                                                                        // 2. 每頁筆數
+                sortDir.equals("asc") ? Sort.Direction.ASC : Sort.Direction.DESC,                   // 3. 排序方向
+                sortField                                                                // 4. 排序欄位
         );
         // 2) 執行 JPQL @Query 查詢並回 Page
         return contactRepository.findByStatusWithPageableAtQuery(ProjectConstant.STATUS_OPEN, pageable);
