@@ -407,7 +407,14 @@ Pageable pageable = PageRequest.of(
 return contactRepository.findByStatusWithPageableAtQuery(STATUS_OPEN, pageable);
 ```
 
-Spring Data 會自動把它翻譯成 `LIMIT` / `OFFSET` 與 `ORDER BY`，**不用自己寫分頁 SQL**。
+Spring Data 會自動把它翻譯成分頁 SQL，**不用自己寫**。實際產生的語句（H2 / Hibernate 7 用 SQL 標準語法，不是 `LIMIT`）：
+
+```sql
+-- 第 1 頁：index 0，不需要跳過 → 連 offset 子句都省略
+order by c1_0.contact_id fetch first ? rows only
+-- 第 2 頁以後：index 1, 2, 3…
+order by c1_0.contact_id offset ? rows fetch first ? rows only
+```
 
 **③ Controller 把分頁狀態交給模板**
 
