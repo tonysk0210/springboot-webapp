@@ -261,13 +261,51 @@ erDiagram
 
 逐條關聯：
 
-| 關聯 | 外鍵位置 | 讀法 | 對應程式 |
-|---|---|---|---|
-| `PERSON }o--\|\| ROLE` | `person.role_id` **NOT NULL** | 多個使用者共用一個角色；**每個使用者一定要有角色** | `@ManyToOne(optional = false)` |
-| `PERSON }o--o\| PLAN` | `person.plan_id` **NULL** | 多個使用者可屬於同一方案；**也可以沒有方案** | `@ManyToOne`（未設 `optional=false`） |
-| `PERSON \|\|--o\| ADDRESS` | `person.address_id` **NULL** | 一個使用者最多一筆地址；**註冊時不填，之後在個人資料補** | `@OneToOne(cascade = MERGE)` |
-| `PERSON }o--o{ COURSE` | 中介表 `person_courses` | 一個學生可選多門課，一門課可被多人選 | `@ManyToMany` + `@JoinTable` |
-| `CONTACT`、`NEWS` | 無 | **獨立資料表，沒有任何外鍵** | 見下表 |
+| 關聯 | 讀法 | 外鍵位置 |
+|---|---|---|
+| `PERSON }o--\|\| ROLE` | 多個使用者共用一個角色；**每個使用者一定要有角色** | `person.role_id` **NOT NULL** |
+| `PERSON }o--o\| PLAN` | 多個使用者可屬於同一方案；**也可以沒有方案** | `person.plan_id` **NULL** |
+| `PERSON \|\|--o\| ADDRESS` | 一個使用者最多一筆地址；**註冊時不填，之後在個人資料補** | `person.address_id` **NULL** |
+| `PERSON }o--o{ COURSE` | 一個學生可選多門課，一門課可被多人選 | 中介表 `person_courses` |
+| `CONTACT`、`NEWS` | 獨立資料表，沒有任何外鍵 | 無 |
+
+#### 這些關聯寫在哪
+
+**四個關聯全部宣告在 `model/Person.java` 一個檔案裡** —— 因為外鍵欄位都在 `person` 表上：
+
+```java
+// Person.java
+
+@ManyToOne(fetch = FetchType.EAGER, optional = false)      // 多對一，且必填
+@JoinColumn(name = "role_id", nullable = false)            // 存進 person.role_id
+private Role roles;                                        // 型別 Role → 指向 roles 表
+
+@OneToOne(fetch = FetchType.EAGER, cascade = {CascadeType.MERGE})
+@JoinColumn(name = "address_id")                           // 存進 person.address_id（可為 NULL）
+private Address address;                                   // 型別 Address → 指向 address 表
+
+@ManyToOne(fetch = FetchType.EAGER)                        // 沒有 optional=false → 選填
+@JoinColumn(name = "plan_id")                              // 存進 person.plan_id（可為 NULL）
+private Plan plan;                                         // 型別 Plan → 指向 plan 表
+
+@ManyToMany(fetch = FetchType.EAGER)
+@JoinTable(name = "person_courses",                        // 中介表
+        joinColumns = @JoinColumn(name = "person_id"),         // 我這側的欄位
+        inverseJoinColumns = @JoinColumn(name = "course_id"))  // 對面那側的欄位
+private Set<Course> courses = new HashSet<>();             // 型別 Course → 指向 courses 表
+```
+
+各註解的分工 —— **搞清楚這個，圖跟程式就對得起來了**：
+
+| 註解 / 屬性 | 決定什麼 | 對應圖上哪部分 |
+|---|---|---|
+| **欄位的 Java 型別**（`Role`、`Plan`、`Address`、`Course`） | **指向哪張表** | 線連到哪個方塊 |
+| `@ManyToOne` / `@OneToOne` / `@ManyToMany` | **基數**（兩端各能有幾筆） | `}o` / `\|\|` / `o{` 的形狀 |
+| `optional = false`（或 `nullable = false`） | **必填與否** | 該端是 `\|\|` 還是 `o\|` |
+| `@JoinColumn(name = "...")` | 外鍵**存在本表的哪一欄** | 線上的標籤文字 |
+| `@JoinTable(...)` | 多對多的**中介表**與兩側欄位名 | `person_courses` 那條線 |
+
+⚠️ 最容易搞混的一點：**`@JoinColumn` 不是用來指定「對面是哪張表」的** —— 對面是哪張表由欄位型別決定（`private Role roles` → `roles` 表）。`@JoinColumn` 只負責回答「外鍵要存在 `person` 表的哪一欄」。
 
 三個補充重點：
 
