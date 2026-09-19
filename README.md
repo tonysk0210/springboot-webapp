@@ -184,17 +184,6 @@ flowchart TD
 | **[4]** | MyWeb **主動**向 8083 註冊 | 啟動時送出 service / management base-url |
 | **[5]** | AdminActuator 反向定期輪詢 | Basic Auth 且 **無 session** — 每次輪詢都重新驗證一次 |
 
-> 📌 **兩個寫入端點都會原樣傳遞上游的 status code**（目前是 `201 Created`）。
->
-> 關鍵在 **controller 的回傳型別**，而不是用了哪個 HTTP client：
->
-> | 端點 | 回傳型別 | 取回應的方式 |
-> |---|---|---|
-> | `/saveMessages` | `ResponseEntity<Response>` | `restTemplate.exchange(...)` 本來就回 `ResponseEntity` |
-> | `/saveMessagesWebClient` | `Mono<ResponseEntity<Response>>` | `.retrieve().toEntity(Response.class)` |
->
-> ⚠️ WebClient 若改用 `.bodyToMono(Response.class)`，**狀態碼會被丟掉**，這一層就會退回 Spring 預設的 200 —— 造成「body 寫著 `statusCode: 201`、外層 HTTP 卻是 200」的不一致。要傳遞狀態碼就得用 `.toEntity(...)`。
-
 各模組的職責與依賴方向：
 
 | 模組 | 對外提供 | 依賴誰 |
@@ -495,7 +484,7 @@ curl -X POST http://localhost:8082/saveMessagesWebClient -H "Content-Type: appli
 curl -u admin@gmail.com:admin http://localhost:8081/myWeb/actuator/health
 ```
 
-> ③ 與 ④ 都會回 **201** — 兩個端點都以 `ResponseEntity` 形式回傳，原樣傳遞上游 `MyWeb` 的狀態碼。詳見[上方說明](#模組間的通訊契約)。
+> ③ 與 ④ 都會回 **201** — 兩個端點都原樣傳遞上游 `MyWeb` 的狀態碼。
 
 ### 建置與打包
 
