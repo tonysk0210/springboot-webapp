@@ -1,6 +1,6 @@
 HELP.md
 target/
-# logging.file.name=logs/myweb.log 的輸出目錄（含輪替後的 .gz 檔）
+# log 輸出目錄（含輪替後的 .gz 檔）；logging.file.name=MyWeb/logs/myweb.log
 logs/
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/

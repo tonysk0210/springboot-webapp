@@ -147,6 +147,13 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <!-- 把 spring-boot:run 的工作目錄設為 repo 根（預設是 ${project.basedir}，即 MyWeb/）。
+                         目的：讓 IDE 啟動（工作目錄 = repo 根）與 mvnw spring-boot:run 的相對路徑一致，
+                         這樣 application.properties 裡的 logging.file.name=MyWeb/logs/myweb.log
+                         兩種啟動方式都會落在 MyWeb/logs/ 底下，不會一邊跑到 repo 根。 -->
+                    <workingDirectory>${project.basedir}/..</workingDirectory>
+                </configuration>
             </plugin>
             <!-- Java 23+ 停用預設的 classpath 隱式 annotation processing；
                  明確宣告 Lombok 為 annotation processor 才能生成 getter/setter/@Slf4j 的 log 變數 -->

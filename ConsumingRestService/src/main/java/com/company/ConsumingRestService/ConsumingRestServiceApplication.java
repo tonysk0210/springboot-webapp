@@ -5,7 +5,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.openfeign.EnableFeignClients;
 
 @SpringBootApplication
-@EnableFeignClients(basePackages = "com.company.ConsumingRestService.proxy") //Identifies where the ContactProxy interface is located
+@EnableFeignClients(basePackages = "com.company.ConsumingRestService.proxy") // 指定 OpenFeign REST Client 的所在套件
 public class ConsumingRestServiceApplication {
 
     public static void main(String[] args) {

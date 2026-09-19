@@ -5,8 +5,8 @@
 # Log file
 *.log
 
-# logging.file.name=logs/myweb.log 的輸出目錄（含輪替後的 .gz 檔）
-# 目錄位置取決於啟動時的工作目錄：從 repo 根啟動 → ./logs、從 MyWeb/ 啟動 → MyWeb/logs
+# log 輸出目錄（含輪替後的 .gz 檔）。正式位置是 MyWeb/logs/（見 MyWeb/application.properties 的
+# logging.file.name=MyWeb/logs/myweb.log）；這條規則同時擋掉任何層級的 logs/
 logs/
 
 # Package Files

@@ -105,7 +105,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Log 顏色
 `constant/ProjectConstant` 定義了 ANSI 顏色碼，供 `LoggerAspect` 與部分 controller 使用。`application.properties` 內的 console log pattern 使用了 Logback 顏色轉換器 — 終端機會有彩色輸出。
 
-log 同時落地為檔案（`logging.file.name=logs/myweb.log`，已加入 `.gitignore`）。這個屬性是 `/myWeb/actuator/logfile` 端點的**註冊前提** — 沒設就沒有該端點，Spring Boot Admin 的 Logfile 頁籤也會是空的。`logging.pattern.file` 刻意**不帶** `%green()` 等 ANSI 轉換器，否則顏色碼會寫進檔案變成亂碼；輪替由 `logging.logback.rollingpolicy.*` 控制（單檔 10MB／保留 7 天／總量 100MB）。
+log 同時落地為檔案（`logging.file.name=MyWeb/logs/myweb.log`，已加入 `.gitignore`）。路徑是相對於**工作目錄 = repo 根**；`mvnw spring-boot:run` 預設工作目錄是 `MyWeb/`，所以 `pom.xml` 的 `spring-boot-maven-plugin` 加了 `<workingDirectory>${project.basedir}/..</workingDirectory>` 對齊 — **改動任一邊，log 就會跑到別的地方**。這個屬性是 `/myWeb/actuator/logfile` 端點的**註冊前提** — 沒設就沒有該端點，Spring Boot Admin 的 Logfile 頁籤也會是空的。`logging.pattern.file` 刻意**不帶** `%green()` 等 ANSI 轉換器，否則顏色碼會寫進檔案變成亂碼；輪替由 `logging.logback.rollingpolicy.*` 控制（單檔 10MB／保留 7 天／總量 100MB）。
 
 **不要加回 `spring.jpa.show-sql=true`** — 它直接 `System.out.println`，不經 Logback，所以無法用 log level 控制、不進 log 檔、Admin 的 Logfile 頁籤看不到，而且會被 actuator 輪詢洗版（每次驗證帶 3 筆查詢）。要看 SQL 請改用 `logging.level.org.hibernate.SQL=DEBUG`（想看 `?` 的實際參數值再加 `logging.level.org.hibernate.orm.jdbc.bind=TRACE`），可在 Boot Admin 的 Loggers 頁籤線上開關、免重啟。
 

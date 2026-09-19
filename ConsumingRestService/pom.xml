@@ -6,7 +6,7 @@
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
         <version>4.1.0</version>
-        <relativePath/> <!-- lookup parent from repository -->
+        <relativePath/> <!-- 從本機或 Maven Repository 尋找父 POM -->
     </parent>
     <groupId>com.company</groupId>
     <artifactId>ConsumingRestService</artifactId>
@@ -15,41 +15,41 @@
     <description>ConsumingRestService</description>
     <properties>
         <java.version>25</java.version>
-        <!--Spring Cloud — Oakwood release train, 對應 Spring Boot 4.1-->
+        <!-- Spring Cloud Oakwood 版本列車，對應 Spring Boot 4.1 -->
         <spring-cloud.version>2025.1.2</spring-cloud.version>
     </properties>
     <dependencies>
-        <!--starter-webmvc — Boot 4 建議命名（舊 starter-web 已 deprecated） -->
+        <!-- Web MVC：Boot 4 建議使用的新名稱（舊 starter-web 已淘汰） -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webmvc</artifactId>
         </dependency>
-        <!--starter-restclient — Boot 4 拆分：RestTemplateBuilder / RestClient 移至此模組-->
+        <!-- REST Client：Boot 4 將 RestTemplateBuilder / RestClient 移至此模組 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-restclient</artifactId>
         </dependency>
-        <!--devtools-->
+        <!-- 開發工具 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-devtools</artifactId>
         </dependency>
-        <!--openfeign-->
+        <!-- OpenFeign 宣告式 REST Client -->
         <dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-openfeign</artifactId>
         </dependency>
-        <!--loadbalancer-->
+        <!-- Spring Cloud LoadBalancer -->
         <dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-loadbalancer</artifactId>
         </dependency>
-        <!--lombok-->
+        <!-- Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
         </dependency>
-        <!--webflux-->
+        <!-- WebFlux，供 WebClient 使用 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webflux</artifactId>
@@ -61,7 +61,7 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
-    <!--cloud dependency-->
+    <!-- Spring Cloud 依賴版本管理 -->
     <dependencyManagement>
         <dependencies>
             <dependency>

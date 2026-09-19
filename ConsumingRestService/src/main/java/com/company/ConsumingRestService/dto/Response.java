@@ -1,12 +1,10 @@
-package com.company.ConsumingRestService.model;
+package com.company.ConsumingRestService.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-/**
- * This pojo class is created for RestTemplate
- */
+/** RestTemplate 使用的回應資料物件。 */
 @Data
 @AllArgsConstructor
 @NoArgsConstructor

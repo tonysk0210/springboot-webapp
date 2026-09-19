@@ -11,24 +11,22 @@ import org.springframework.web.reactive.function.client.WebClient;
 @Configuration
 public class ProjectConfiguration {
 
-    //Authorization setup for FeignClient
+    // 設定 FeignClient 的 Basic Auth
     @Bean
     public BasicAuthRequestInterceptor basicAuthRequestInterceptor() {
         return new BasicAuthRequestInterceptor("admin@gmail.com", "admin");
     }
 
-    //Authorization setup for RestTemplate
+    // 設定 RestTemplate 的 Basic Auth
     @Bean
     public RestTemplate restTemplate() {
         RestTemplateBuilder restTemplateBuilder = new RestTemplateBuilder();
         return restTemplateBuilder.basicAuthentication("admin@gmail.com", "admin").build();
     }
 
-    //Authorization set up for WebClient
+    // 設定 WebClient 的 Basic Auth
     @Bean
     public WebClient webClient() {
         return WebClient.builder().filter(ExchangeFilterFunctions.basicAuthentication("admin@gmail.com", "admin")).build();
     }
-
-
 }

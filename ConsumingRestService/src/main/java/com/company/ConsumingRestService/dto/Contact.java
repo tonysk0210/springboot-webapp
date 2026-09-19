@@ -1,10 +1,8 @@
-package com.company.ConsumingRestService.model;
+package com.company.ConsumingRestService.dto;
 
 import lombok.Data;
 
-/**
- * This pojo class is created for RestTemplate
- */
+/** RestTemplate 使用的資料傳輸物件。 */
 @Data
 public class Contact {
 

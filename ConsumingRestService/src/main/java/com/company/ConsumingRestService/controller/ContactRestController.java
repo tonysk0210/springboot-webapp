@@ -1,8 +1,8 @@
 package com.company.ConsumingRestService.controller;
 
-import com.company.ConsumingRestService.model.Contact;
-import com.company.ConsumingRestService.model.Response;
-import com.company.ConsumingRestService.proxy.ContactProxy;
+import com.company.ConsumingRestService.dto.Contact;
+import com.company.ConsumingRestService.dto.Response;
+import com.company.ConsumingRestService.proxy.OpenFeignRestClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -18,28 +18,29 @@ import java.util.List;
 @RestController
 public class ContactRestController {
 
-    private final ContactProxy contactProxy;
+    private final OpenFeignRestClient openFeignRestClient;
     private final RestTemplate restTemplate;
     private final WebClient webClient;
 
     @Autowired
-    public ContactRestController(ContactProxy contactProxy, RestTemplate restTemplate, WebClient webClient) {
-        this.contactProxy = contactProxy;
+    public ContactRestController(OpenFeignRestClient openFeignRestClient, RestTemplate restTemplate, WebClient webClient) {
+        this.openFeignRestClient = openFeignRestClient;
         this.restTemplate = restTemplate;
         this.webClient = webClient;
     }
 
     /**
-     * http://localhost:8082/getMessages?status=OPEN to retrieve the message with OPEN status
+     * 使用 FeignClient 取得指定狀態的聯絡訊息，例如 status=OPEN。
      */
-    //via proxy FeignClient
+    // 透過 FeignClient 呼叫
     @GetMapping("/getMessages")
     public List<Contact> getMessages(@RequestParam String status) {
-        return contactProxy.getContactMessageByStatusAPI(status);
+        return openFeignRestClient.getContactMessageByStatusAPI(status);
     }
 
     /**
-     * http://localhost:8082/saveMessages to save the messages with contact fields
+     * 透過 RestTemplate 儲存聯絡訊息。
+     * 呼叫：POST http://localhost:8082/saveMessages
      * {
      * "name" : "RestTemplate",
      * "mobile" : "1234567890",
@@ -49,39 +50,40 @@ public class ContactRestController {
      * "status" : "OPEN"
      * }
      */
-    //via RestTemplate
+    // 透過 RestTemplate 呼叫
     @PostMapping("/saveMessages")
     public ResponseEntity saveMessages(@RequestBody Contact contact) {
         String uri = "http://localhost:8081/api/contact/saveContactMessage";
-        //1) Instantiate HttpHeaders with required "invocationFrom"
+        // 1) 建立 HttpHeaders，並加入必要的 invocationFrom
         HttpHeaders headers = new HttpHeaders();
         headers.add("invocationFrom", "RestTemplate");
-        //2) Instantiate ResponseEntity to receive after the operation using an HttpEntity wrapping the body and headers.
+        // 2) 使用 HttpEntity 包裝請求內容與標頭
         HttpEntity<Contact> httpEntity = new HttpEntity<>(contact, headers);
-        //3) Executes the HTTP call
+        // 3) 執行 HTTP 呼叫
         ResponseEntity<Response> responseEntity = restTemplate.exchange(uri, HttpMethod.POST, httpEntity, Response.class);
         return responseEntity;
     }
 
     /**
-     * http://localhost:8082/saveMessagesWebClient to save to save the messages with contact fields
+     * 透過 WebClient 儲存聯絡訊息。
+     * 呼叫：POST http://localhost:8082/saveMessagesWebClient
      * {
-     *     "name" : "WebClient",
-     *     "mobile" : "1234567890",
-     *     "email" : "webclient@gmail.com",
-     *     "subject" : "webclient",
-     *     "message" : "webclient message",
-     *     "status" : "OPEN"
+     * "name" : "WebClient",
+     * "mobile" : "1234567890",
+     * "email" : "webclient@gmail.com",
+     * "subject" : "webclient",
+     * "message" : "webclient message",
+     * "status" : "OPEN"
      * }
      */
-    //via Webclient
+    // 透過 WebClient 呼叫
     @PostMapping("/saveMessagesWebClient")
     public Mono<Response> saveMessagesWebClient(@RequestBody Contact contact) {
         String uri = "http://localhost:8081/api/contact/saveContactMessage";
         return webClient.post().uri(uri)
-                .header("invocationFrom", "WebClient") //1) Add custom header
-                .body(Mono.just(contact), Contact.class) //2) Attach request body
+                .header("invocationFrom", "WebClient") // 1) 加入自訂標頭
+                .body(Mono.just(contact), Contact.class) // 2) 設定請求內容
                 .retrieve()
-                .bodyToMono(Response.class); //3) Extract response as Mono<Response>
+                .bodyToMono(Response.class); // 3) 將回應轉為 Mono<Response>
     }
 }
