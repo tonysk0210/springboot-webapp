@@ -20,7 +20,7 @@
   <img alt="Spring Security" src="https://img.shields.io/badge/Spring%20Security-7.1.0-6DB33F?logo=springsecurity&logoColor=white">
   <img alt="Spring Cloud" src="https://img.shields.io/badge/Spring%20Cloud-2025.1.2%20Oakwood-6DB33F?logo=spring&logoColor=white">
   <img alt="Thymeleaf" src="https://img.shields.io/badge/Thymeleaf-3.1.5-005F0F?logo=thymeleaf&logoColor=white">
-  <img alt="Build" src="https://img.shields.io/badge/Maven-Wrapper-C71A36?logo=apachemaven&logoColor=white">
+  <img alt="Build" src="https://img.shields.io/badge/Maven-3.9.9-C71A36?logo=apachemaven&logoColor=white">
   <img alt="DB" src="https://img.shields.io/badge/H2-in--memory-0000BB?logo=h2database&logoColor=white">
 </p>
 
@@ -597,7 +597,7 @@ public String viewContactMessage(Model model,
 |---|---|
 | 語言 | **Java 25** |
 | 框架 | **Spring Boot 4.1.0**、Spring Cloud **2025.1.2**（Oakwood，僅 `ConsumingRestService`） |
-| 建置 | Maven Wrapper（`mvnw` / `mvnw.cmd`，不需另裝 Maven） |
+| 建置 | **Maven 3.9.9** — Maven Wrapper（`mvnw` / `mvnw.cmd`，不需另裝 Maven） |
 | 前端 | **Thymeleaf 3.1.5** |
 | 安全 | **Spring Security 7.1.0** + BCrypt |
 | 持久層 | Spring Data JPA（**Hibernate 7.4**）、Spring Data REST |
